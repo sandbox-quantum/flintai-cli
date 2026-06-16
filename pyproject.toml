@@ -1,0 +1,60 @@
+[project]
+name = "flintai-cli"
+version = "0.1.0"
+description = "Command-line tool for evaluating agents, offering two features to assess agents via code scanning (`flintai scan`, whitebox testing) and runtime evaluation (`flintai eval`, blackbox testing)"
+readme = "README.md"
+license = { file = "LICENSE" }
+requires-python = ">=3.13"
+authors = [
+  { name = "SandboxAQ", email = "info@flintai.dev" },
+]
+dependencies = [
+  "aiohttp>=3.9",
+  "anthropic==0.87.0",
+  "cvss>=2.6",
+  "datafog>=4.4.0",
+  "dataclasses-json==0.6.7",
+  "detect-secrets>=1.5.0",
+  "garak==0.14.0",
+  "google-adk==2.2.0",
+  "litellm>=1.83.7",
+  "openai==2.29.0",
+  "pydantic==2.12.5",
+  "python-dotenv==1.2.2",
+  "requests>=2.33.0",
+  "rich>=13.0",
+  "transformers==5.3.0",
+]
+
+[dependency-groups]
+dev = [
+  "pip-licenses>=5.0",
+  "cyclonedx-bom>=6.0",
+  "pip-audit>=2.7",
+  "pip-tools>=7.4",
+]
+
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+include = ["flintai*"]
+
+[tool.setuptools.package-data]
+flintai = [
+    "**/*.json",
+    "**/*.yaml",
+    "**/*.yml",
+    "**/*.txt",
+    "**/*.csv",
+]
+
+[project.scripts]
+flintai = "flintai.cli.main:main"
+
+[project.urls]
+Homepage = "https://github.com/sandbox-quantum/flintai-cli"
+Issues = "https://github.com/sandbox-quantum/flintai-cli/issues"
+
+ 

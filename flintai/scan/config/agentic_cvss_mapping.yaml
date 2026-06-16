@@ -1,0 +1,136 @@
+# agentic_cvss_mapping.yaml
+# CVSS v4 base vectors for all OWASP ASI01-ASI10 subcategories.
+#
+# Pattern mirrors the MCP scan agent's cvss_mapping.yaml.
+# compute_cvss() in tool_dispatcher.py loads this file and adjusts
+# vectors based on deployment context flags before computing the score.
+#
+# Vectors are the BASE case (local access, no auth). The compute_cvss()
+# tool adjusts AV, PR, UI, SC/SI/SA based on boolean context flags:
+#   exposed_over_network  -> AV:N
+#   requires_auth         -> PR:L
+#   user_interaction      -> UI:P
+#   affects_remote_system -> SC:H / SI:H / SA:H
+#
+# Reference: FIRST.org CVSS v4 specification
+# Taxonomy:  OWASP Top 10 for Agentic Applications 2026 (ASI01-ASI10)
+
+agentic_cvss_mapping:
+
+  # ── ASI01: Agent Goal Hijack ──────────────────────────────────────────────
+  direct_prompt_injection:
+    vector: CVSS:4.0/AV:N/AC:L/AT:N/PR:N/UI:N/VC:H/VI:H/VA:L/SC:H/SI:H/SA:L
+
+  indirect_prompt_injection:
+    vector: CVSS:4.0/AV:N/AC:H/AT:N/PR:N/UI:N/VC:H/VI:H/VA:L/SC:H/SI:H/SA:L
+
+  goal_manipulation_via_rag:
+    vector: CVSS:4.0/AV:N/AC:H/AT:N/PR:L/UI:N/VC:H/VI:H/VA:L/SC:H/SI:H/SA:L
+
+  # ── ASI02: Tool Misuse and Exploitation ───────────────────────────────────
+  excessive_tool_permissions:
+    vector: CVSS:4.0/AV:N/AC:L/AT:N/PR:L/UI:N/VC:H/VI:H/VA:L/SC:N/SI:N/SA:N
+
+  unvalidated_tool_input:
+    vector: CVSS:4.0/AV:N/AC:L/AT:N/PR:L/UI:N/VC:L/VI:H/VA:L/SC:N/SI:N/SA:N
+
+  poisoned_tool_descriptor:
+    vector: CVSS:4.0/AV:N/AC:H/AT:N/PR:L/UI:N/VC:H/VI:H/VA:L/SC:H/SI:H/SA:N
+
+  path_traversal:
+    vector: CVSS:4.0/AV:N/AC:L/AT:N/PR:L/UI:N/VC:H/VI:L/VA:L/SC:N/SI:N/SA:N
+
+  # ── ASI03: Identity and Privilege Abuse ───────────────────────────────────
+  hardcoded_credentials:
+    vector: CVSS:4.0/AV:N/AC:L/AT:N/PR:N/UI:N/VC:H/VI:L/VA:N/SC:H/SI:L/SA:N
+
+  missing_auth_on_endpoint:
+    vector: CVSS:4.0/AV:N/AC:L/AT:N/PR:N/UI:N/VC:H/VI:H/VA:L/SC:N/SI:N/SA:N
+
+  over_privileged_agent:
+    vector: CVSS:4.0/AV:N/AC:L/AT:N/PR:L/UI:N/VC:H/VI:H/VA:L/SC:N/SI:N/SA:N
+
+  confused_deputy:
+    vector: CVSS:4.0/AV:N/AC:H/AT:N/PR:N/UI:N/VC:H/VI:H/VA:N/SC:H/SI:H/SA:N
+
+  inherited_session_abuse:
+    vector: CVSS:4.0/AV:N/AC:H/AT:N/PR:L/UI:N/VC:H/VI:H/VA:L/SC:H/SI:H/SA:N
+
+  # ── ASI04: Agentic Supply Chain Vulnerabilities ───────────────────────────
+  unpinned_dependencies:
+    vector: CVSS:4.0/AV:N/AC:H/AT:N/PR:N/UI:N/VC:H/VI:H/VA:L/SC:H/SI:H/SA:N
+
+  known_vulnerable_dependency:
+    vector: CVSS:4.0/AV:N/AC:L/AT:N/PR:N/UI:N/VC:H/VI:H/VA:H/SC:N/SI:N/SA:N
+
+  untrusted_external_tool:
+    vector: CVSS:4.0/AV:N/AC:H/AT:N/PR:L/UI:N/VC:H/VI:H/VA:L/SC:H/SI:H/SA:N
+
+  # ── ASI05: Unexpected Code Execution ─────────────────────────────────────
+  arbitrary_code_execution:
+    vector: CVSS:4.0/AV:N/AC:L/AT:N/PR:L/UI:N/VC:H/VI:H/VA:H/SC:H/SI:H/SA:H
+
+  unsafe_code_generation:
+    vector: CVSS:4.0/AV:N/AC:H/AT:N/PR:L/UI:N/VC:H/VI:H/VA:L/SC:H/SI:H/SA:N
+
+  unsafe_deserialization:
+    vector: CVSS:4.0/AV:N/AC:H/AT:N/PR:L/UI:N/VC:H/VI:H/VA:H/SC:N/SI:N/SA:N
+
+  # ── ASI06: Memory and Context Poisoning ───────────────────────────────────
+  memory_poisoning:
+    vector: CVSS:4.0/AV:N/AC:H/AT:N/PR:L/UI:N/VC:H/VI:H/VA:L/SC:L/SI:L/SA:N
+
+  persistent_memory_no_sanitization:
+    vector: CVSS:4.0/AV:N/AC:L/AT:N/PR:L/UI:N/VC:H/VI:L/VA:N/SC:N/SI:N/SA:N
+
+  cross_session_contamination:
+    vector: CVSS:4.0/AV:N/AC:H/AT:N/PR:L/UI:N/VC:H/VI:L/VA:N/SC:N/SI:N/SA:N
+
+  rag_poisoning:
+    vector: CVSS:4.0/AV:N/AC:H/AT:N/PR:L/UI:N/VC:H/VI:H/VA:L/SC:H/SI:H/SA:N
+
+  # ── ASI07: Insecure Inter-Agent Communication ─────────────────────────────
+  unauthenticated_agent_communication:
+    vector: CVSS:4.0/AV:N/AC:H/AT:N/PR:N/UI:N/VC:H/VI:H/VA:L/SC:H/SI:H/SA:N
+
+  unencrypted_agent_channel:
+    vector: CVSS:4.0/AV:N/AC:H/AT:N/PR:N/UI:N/VC:H/VI:L/VA:N/SC:N/SI:N/SA:N
+
+  unvalidated_agent_message:
+    vector: CVSS:4.0/AV:N/AC:H/AT:N/PR:L/UI:N/VC:H/VI:H/VA:L/SC:H/SI:H/SA:N
+
+  # ── ASI08: Cascading Failures ─────────────────────────────────────────────
+  unbounded_agent_loop:
+    vector: CVSS:4.0/AV:N/AC:L/AT:N/PR:L/UI:N/VC:N/VI:N/VA:H/SC:N/SI:N/SA:H
+
+  missing_circuit_breaker:
+    vector: CVSS:4.0/AV:N/AC:H/AT:N/PR:L/UI:N/VC:N/VI:H/VA:H/SC:N/SI:H/SA:H
+
+  missing_blast_radius_limit:
+    vector: CVSS:4.0/AV:N/AC:L/AT:N/PR:L/UI:N/VC:N/VI:H/VA:H/SC:N/SI:H/SA:H
+
+  # ── ASI09: Human-Agent Trust Exploitation ─────────────────────────────────
+  no_human_in_the_loop:
+    vector: CVSS:4.0/AV:N/AC:L/AT:N/PR:L/UI:N/VC:L/VI:H/VA:L/SC:N/SI:H/SA:N
+
+  sensitive_data_in_output:
+    vector: CVSS:4.0/AV:N/AC:L/AT:N/PR:L/UI:N/VC:H/VI:N/VA:N/SC:N/SI:N/SA:N
+
+  missing_action_confirmation:
+    vector: CVSS:4.0/AV:N/AC:L/AT:N/PR:L/UI:N/VC:L/VI:H/VA:H/SC:N/SI:H/SA:H
+
+  persuasive_agent_language:
+    vector: CVSS:4.0/AV:N/AC:H/AT:N/PR:L/UI:P/VC:L/VI:H/VA:N/SC:N/SI:H/SA:N
+
+  # ── ASI10: Rogue Agents ───────────────────────────────────────────────────
+  missing_kill_switch:
+    vector: CVSS:4.0/AV:N/AC:H/AT:N/PR:L/UI:N/VC:L/VI:H/VA:H/SC:N/SI:H/SA:H
+
+  missing_behavioral_guardrails:
+    vector: CVSS:4.0/AV:N/AC:L/AT:N/PR:L/UI:N/VC:H/VI:H/VA:L/SC:H/SI:H/SA:N
+
+  unchecked_agent_delegation:
+    vector: CVSS:4.0/AV:N/AC:H/AT:N/PR:L/UI:N/VC:H/VI:H/VA:L/SC:H/SI:H/SA:N
+
+  missing_agent_monitoring:
+    vector: CVSS:4.0/AV:N/AC:H/AT:N/PR:L/UI:N/VC:H/VI:H/VA:L/SC:N/SI:N/SA:N

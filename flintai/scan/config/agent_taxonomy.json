@@ -1,0 +1,481 @@
+{
+  "asi01_agent_goal_hijack": {
+    "asi_code": "ASI01",
+    "asi_title": "Agent Goal Hijack",
+    "description": "Attacker manipulates agent objectives or decision path via malicious input content",
+    "subcategories": {
+      "direct_prompt_injection": {
+        "title": "Direct Prompt Injection",
+        "description": "User-controlled input flows unsanitized into agent system prompt or LLM call",
+        "cvss_vector": "CVSS:4.0/AV:N/AC:L/AT:N/PR:N/UI:N/VC:H/VI:H/VA:L/SC:H/SI:H/SA:L",
+        "severity": "critical",
+        "detection_hints": ["f-string with user input in prompt", "format() on prompt string", ".invoke(user_input)", ".run(user_input)"],
+        "remediation": "Separate user input from system instructions using distinct message roles. Validate and sanitize all external input before passing to the LLM."
+      },
+      "indirect_prompt_injection": {
+        "title": "Indirect Prompt Injection via Tool Output",
+        "description": "Agent processes external tool output or retrieved data containing injected instructions",
+        "cvss_vector": "CVSS:4.0/AV:N/AC:H/AT:N/PR:N/UI:N/VC:H/VI:H/VA:L/SC:H/SI:H/SA:L",
+        "severity": "high",
+        "detection_hints": [
+          "web search tool result fed to LLM",
+          "file read tool output not sanitized",
+          "email content passed to agent context",
+          "external API response injected into prompt"
+        ],
+        "remediation": "Treat all tool outputs and retrieved content as untrusted data. Filter tool results for injected instructions before feeding back to the agent context."
+      },
+      "goal_manipulation_via_rag": {
+        "title": "Goal Manipulation via RAG or Retrieved Content",
+        "description": "Agent retrieves poisoned documents or vector store entries that redirect its objectives",
+        "cvss_vector": "CVSS:4.0/AV:N/AC:H/AT:N/PR:L/UI:N/VC:H/VI:H/VA:L/SC:H/SI:H/SA:L",
+        "severity": "high",
+        "detection_hints": [
+          "RAG retrieval without content validation",
+          "vector store results fed directly to agent",
+          "unverified document sources in agent context"
+        ],
+        "remediation": "Validate RAG data sources for integrity. Use multiple independent sources for cross-verification. Lock agent system prompts so goal priorities are explicit and auditable."
+      }
+    }
+  },
+  "asi02_tool_misuse": {
+    "asi_code": "ASI02",
+    "asi_title": "Tool Misuse and Exploitation",
+    "description": "Agent uses legitimate tools in unsafe ways due to over-privilege, bad input, or poisoned descriptors",
+    "subcategories": {
+      "excessive_tool_permissions": {
+        "title": "Excessive Tool Permissions",
+        "description": "Agent granted tools far beyond what its stated goal requires \u2014 violates least-agency principle",
+        "cvss_vector": "CVSS:4.0/AV:N/AC:L/AT:N/PR:L/UI:N/VC:H/VI:H/VA:L/SC:N/SI:N/SA:N",
+        "severity": "high",
+        "detection_hints": [
+          "shell tool registered on narrow-purpose agent",
+          "broad filesystem or DB access for read-only task",
+          "admin-level tools granted to customer-facing agent"
+        ],
+        "remediation": "Apply least-privilege principle: grant only tools the agent's stated purpose requires. Classify tools by risk level and restrict high-impact tools (send, delete, execute) to trusted contexts."
+      },
+      "unvalidated_tool_input": {
+        "title": "Unvalidated Tool Input Parameters",
+        "description": "Tool parameters flow from LLM output to function calls without type, range, or semantic validation",
+        "cvss_vector": "CVSS:4.0/AV:N/AC:L/AT:N/PR:L/UI:N/VC:L/VI:H/VA:L/SC:N/SI:N/SA:N",
+        "severity": "medium",
+        "detection_hints": [
+          "no input validation on tool arguments",
+          "direct use of LLM-generated args in sensitive functions",
+          "no schema enforcement on tool parameters"
+        ],
+        "remediation": "Validate all tool input parameters for type, range, and format before execution. Use allowlists for permitted values. Block chained command patterns."
+      },
+      "poisoned_tool_descriptor": {
+        "title": "Poisoned or Tampered Tool Descriptor",
+        "description": "Tool definition or MCP server descriptor has been modified to redirect agent actions",
+        "cvss_vector": "CVSS:4.0/AV:N/AC:H/AT:N/PR:L/UI:N/VC:H/VI:H/VA:L/SC:H/SI:H/SA:N",
+        "severity": "high",
+        "detection_hints": [
+          "tool definition loaded from external or unverified source",
+          "MCP server URL not pinned or verified",
+          "dynamic tool registration without manifest signing"
+        ],
+        "remediation": "Verify tool definitions against a trusted registry. Pin tool versions and validate checksums. Monitor for changes to tool schemas at runtime."
+      },
+      "path_traversal": {
+        "title": "Path Traversal in File Tools",
+        "description": "File read/write tools accept paths without sanitization, enabling directory traversal",
+        "cvss_vector": "CVSS:4.0/AV:N/AC:L/AT:N/PR:L/UI:N/VC:H/VI:L/VA:L/SC:N/SI:N/SA:N",
+        "severity": "high",
+        "detection_hints": [
+          "FileReadTool or FileWriteTool with no path restriction",
+          "open(path) with path derived from LLM output",
+          "no path.resolve() or os.path.abspath() sanitization"
+        ],
+        "remediation": "Restrict file paths to a sandbox directory using Path.resolve() and startswith() validation. Reject paths containing '..' or absolute paths outside the allowed root."
+      }
+    }
+  },
+  "asi03_identity_privilege_abuse": {
+    "asi_code": "ASI03",
+    "asi_title": "Identity and Privilege Abuse",
+    "description": "Agents inherit, reuse, or escalate identities and credentials beyond their functional scope",
+    "subcategories": {
+      "hardcoded_credentials": {
+        "title": "Hardcoded API Keys or Credentials",
+        "description": "API keys, tokens, or passwords hardcoded in agent source or config files",
+        "cvss_vector": "CVSS:4.0/AV:N/AC:L/AT:N/PR:N/UI:N/VC:H/VI:L/VA:N/SC:H/SI:L/SA:N",
+        "severity": "critical",
+        "detection_hints": [
+          "api_key= literal string assignment",
+          "OPENAI_API_KEY = '...' hardcoded",
+          "sk- prefix in source file",
+          "password or secret literal in config"
+        ],
+        "remediation": "Load credentials from environment variables or a secrets manager (e.g., AWS Secrets Manager, HashiCorp Vault). Never store API keys, tokens, or passwords in source code."
+      },
+      "missing_auth_on_endpoint": {
+        "title": "Missing Authentication on Agent Endpoint",
+        "description": "Agent server or API endpoint exposed without authentication or TLS",
+        "cvss_vector": "CVSS:4.0/AV:N/AC:L/AT:N/PR:N/UI:N/VC:H/VI:H/VA:L/SC:N/SI:N/SA:N",
+        "severity": "critical",
+        "detection_hints": [
+          "app.run() with no auth middleware",
+          "uvicorn.run(host='0.0.0.0') with no token check",
+          "FastAPI/Flask routes with no authentication decorator",
+          "HTTP server binding to 0.0.0.0"
+        ],
+        "remediation": "Enable TLS on all agent endpoints. Implement authentication (OAuth 2.0, API key verification) and restrict binding to specific network interfaces."
+      },
+      "over_privileged_agent": {
+        "title": "Over-Privileged Agent Role or Identity",
+        "description": "Agent role, backstory, or system prompt grants capabilities beyond its functional need",
+        "cvss_vector": "CVSS:4.0/AV:N/AC:L/AT:N/PR:L/UI:N/VC:H/VI:H/VA:L/SC:N/SI:N/SA:N",
+        "severity": "high",
+        "detection_hints": [
+          "allow_delegation=True with no scope restriction",
+          "admin or superuser role in backstory",
+          "full filesystem access declared in system prompt"
+        ],
+        "remediation": "Restrict the agent's system prompt and role to only necessary capabilities. Remove broad permissions ('full access', 'admin') from agent instructions."
+      },
+      "confused_deputy": {
+        "title": "Confused Deputy Attack",
+        "description": "Agent manipulated into using its legitimate credentials to act on behalf of an attacker",
+        "cvss_vector": "CVSS:4.0/AV:N/AC:H/AT:N/PR:N/UI:N/VC:H/VI:H/VA:N/SC:H/SI:H/SA:N",
+        "severity": "high",
+        "detection_hints": [
+          "agent uses stored OAuth/API credentials without scope check",
+          "no action scope restriction on credential-bearing tools",
+          "broad API tool access with no per-request authorization"
+        ],
+        "remediation": "Validate the identity and authorization of all callers before executing actions on their behalf. Use scoped credentials that cannot be reused across contexts."
+      },
+      "inherited_session_abuse": {
+        "title": "Inherited Session or Token Abuse",
+        "description": "Agent inherits user session, OAuth token, or SSH key with scope broader than needed",
+        "cvss_vector": "CVSS:4.0/AV:N/AC:H/AT:N/PR:L/UI:N/VC:H/VI:H/VA:L/SC:H/SI:H/SA:N",
+        "severity": "high",
+        "detection_hints": [
+          "agent stores SSH or OAuth tokens in memory",
+          "credentials passed across agent boundaries without downscoping",
+          "user session token shared between multiple agents"
+        ],
+        "remediation": "Issue agent-specific credentials with minimal scope instead of inheriting user sessions. Use short-lived tokens and rotate credentials regularly."
+      }
+    }
+  },
+  "asi04_supply_chain": {
+    "asi_code": "ASI04",
+    "asi_title": "Agentic Supply Chain Vulnerabilities",
+    "description": "Compromised runtime components \u2014 tools, plugins, MCP servers, deps \u2014 alter agent behavior",
+    "subcategories": {
+      "unpinned_dependencies": {
+        "title": "Unpinned or Overly Broad Dependency Versions",
+        "description": "requirements.txt uses unpinned or wildcard versions enabling supply chain substitution",
+        "cvss_vector": "CVSS:4.0/AV:N/AC:H/AT:N/PR:N/UI:N/VC:H/VI:H/VA:L/SC:H/SI:H/SA:N",
+        "severity": "high",
+        "detection_hints": [
+          ">= version constraint on AI framework package",
+          "~= or * version in requirements",
+          "no version pin on crewai, langchain, openai, anthropic"
+        ],
+        "remediation": "Pin all dependency versions with == in requirements files. Use a lock file to ensure reproducible builds. Run dependency scanning in CI."
+      },
+      "known_vulnerable_dependency": {
+        "title": "Known Vulnerable Dependency (CVE)",
+        "description": "A package in the dependency tree has a known CVE in the OSV/NVD database",
+        "cvss_vector": "CVSS:4.0/AV:N/AC:L/AT:N/PR:N/UI:N/VC:H/VI:H/VA:H/SC:N/SI:N/SA:N",
+        "severity": "critical",
+        "detection_hints": ["pip-audit findings", "OSV.dev advisory matches"],
+        "remediation": "Upgrade the affected package to the fixed version. If no fix exists, evaluate alternatives or apply compensating controls."
+      },
+      "untrusted_external_tool": {
+        "title": "Untrusted or Unverified External Tool/Plugin",
+        "description": "Agent dynamically loads tools, MCP servers, or plugins without signature or registry verification",
+        "cvss_vector": "CVSS:4.0/AV:N/AC:H/AT:N/PR:L/UI:N/VC:H/VI:H/VA:L/SC:H/SI:H/SA:N",
+        "severity": "high",
+        "detection_hints": [
+          "MCP server URL loaded from config without pinning",
+          "dynamic tool import without hash verification",
+          "third-party plugin loaded without signed manifest"
+        ],
+        "remediation": "Source tools and MCP servers from trusted registries only. Verify signatures and scan code/dependencies before deployment. Proxy agent requests through a gateway."
+      }
+    }
+  },
+  "asi05_unexpected_code_execution": {
+    "asi_code": "ASI05",
+    "asi_title": "Unexpected Code Execution",
+    "description": "Agent generates or runs code, commands, or scripts without safe sandboxing or review",
+    "subcategories": {
+      "arbitrary_code_execution": {
+        "title": "Arbitrary Code Execution via Tool or eval()",
+        "description": "Agent executes shell commands or eval() with parameters derived from LLM output or user input",
+        "cvss_vector": "CVSS:4.0/AV:N/AC:L/AT:N/PR:L/UI:N/VC:H/VI:H/VA:H/SC:H/SI:H/SA:H",
+        "severity": "critical",
+        "detection_hints": [
+          "eval(x) where x comes from LLM or user",
+          "exec(script_content)",
+          "subprocess.run(shell=True)",
+          "os.system(cmd)",
+          "CodeInterpreterTool with no sandbox"
+        ],
+        "remediation": "Replace eval()/exec() with safe alternatives (ast.literal_eval(), operator-based parsers). Use subprocess with argument lists, never shell=True. Sandbox code execution in containers."
+      },
+      "unsafe_code_generation": {
+        "title": "Generated Code Executed Without Review",
+        "description": "Agent-generated code or patches applied directly without human preview or sandboxed testing",
+        "cvss_vector": "CVSS:4.0/AV:N/AC:H/AT:N/PR:L/UI:N/VC:H/VI:H/VA:L/SC:H/SI:H/SA:N",
+        "severity": "high",
+        "detection_hints": [
+          "code generation tool with auto-apply flag",
+          "generated patches run without review step",
+          "no human_input=True before code execution task"
+        ],
+        "remediation": "Review all agent-generated code before execution. Run generated code in a sandboxed environment with restricted filesystem and network access."
+      },
+      "unsafe_deserialization": {
+        "title": "Unsafe Deserialization of Agent State",
+        "description": "Agent deserializes untrusted data (pickle, YAML load, JSON with class hooks) enabling code execution",
+        "cvss_vector": "CVSS:4.0/AV:N/AC:H/AT:N/PR:L/UI:N/VC:H/VI:H/VA:H/SC:N/SI:N/SA:N",
+        "severity": "high",
+        "detection_hints": ["pickle.loads() on external data", "yaml.load() without SafeLoader", "json deserialization with object_hook"],
+        "remediation": "Replace pickle.loads() with json.loads(). Use yaml.safe_load() instead of yaml.load(). Never deserialize data from untrusted sources."
+      }
+    }
+  },
+  "asi06_memory_context_poisoning": {
+    "asi_code": "ASI06",
+    "asi_title": "Memory and Context Poisoning",
+    "description": "Persistent memory, RAG stores, or context summaries poisoned to alter future agent behavior",
+    "subcategories": {
+      "memory_poisoning": {
+        "title": "Agent Memory Poisoning",
+        "description": "Persistent agent memory stores unsanitized content that poisons future reasoning sessions",
+        "cvss_vector": "CVSS:4.0/AV:N/AC:H/AT:N/PR:L/UI:N/VC:H/VI:H/VA:L/SC:L/SI:L/SA:N",
+        "severity": "high",
+        "detection_hints": ["memory=True with no content filter", "store_memory() called on unvalidated output", "append to memory without sanitization"],
+        "remediation": "Scan all memory writes for malicious content before commit. Track provenance of memory entries. Use expiry and down-weighting for unverified memories."
+      },
+      "persistent_memory_no_sanitization": {
+        "title": "Persistent Memory Without Content Filtering",
+        "description": "Agent stores conversation history or tool outputs persistently with no PII or injection filtering",
+        "cvss_vector": "CVSS:4.0/AV:N/AC:L/AT:N/PR:L/UI:N/VC:H/VI:L/VA:N/SC:N/SI:N/SA:N",
+        "severity": "medium",
+        "detection_hints": [
+          "ChromaDB or vector store write without filter",
+          "memory=True on CrewAI agent or crew",
+          "no content filter before vector store ingestion"
+        ],
+        "remediation": "Filter PII, credentials, and injection patterns from content before storing in memory. Implement content classification and redaction rules."
+      },
+      "cross_session_contamination": {
+        "title": "Cross-Session or Cross-Tenant Memory Contamination",
+        "description": "Shared memory or state between agent sessions exposes data from one user or tenant to another",
+        "cvss_vector": "CVSS:4.0/AV:N/AC:H/AT:N/PR:L/UI:N/VC:H/VI:L/VA:N/SC:N/SI:N/SA:N",
+        "severity": "high",
+        "detection_hints": [
+          "global memory object shared across requests",
+          "vector DB without tenant/user isolation",
+          "Crew memory=True with shared vector store"
+        ],
+        "remediation": "Use per-session or per-tenant memory with UUID-based isolation. Clear shared state between sessions. Enforce memory namespace boundaries."
+      },
+      "rag_poisoning": {
+        "title": "RAG Database Poisoning",
+        "description": "Attacker injects adversarial content into RAG knowledge base to manipulate agent responses",
+        "cvss_vector": "CVSS:4.0/AV:N/AC:H/AT:N/PR:L/UI:N/VC:H/VI:H/VA:L/SC:H/SI:H/SA:N",
+        "severity": "high",
+        "detection_hints": [
+          "RAG ingestion without source validation",
+          "unverified external documents added to vector store",
+          "no provenance tracking on RAG entries"
+        ],
+        "remediation": "Validate and authenticate all documents before indexing into RAG. Implement content integrity checks. Monitor for anomalous insertions into vector stores."
+      }
+    }
+  },
+  "asi07_insecure_interagent_comms": {
+    "asi_code": "ASI07",
+    "asi_title": "Insecure Inter-Agent Communication",
+    "description": "Agent-to-agent messages lack authentication, encryption, or semantic validation",
+    "subcategories": {
+      "unauthenticated_agent_communication": {
+        "title": "Unauthenticated Agent-to-Agent Communication",
+        "description": "Messages between agents carry no cryptographic identity proof \u2014 any party can spoof an agent",
+        "cvss_vector": "CVSS:4.0/AV:N/AC:H/AT:N/PR:N/UI:N/VC:H/VI:H/VA:L/SC:H/SI:H/SA:N",
+        "severity": "high",
+        "detection_hints": [
+          "agent communication with no sender authentication",
+          "GroupChat with no speaker verification",
+          "agent messages trusted implicitly by role name"
+        ],
+        "remediation": "Require mutual authentication (mTLS, signed tokens) for all agent-to-agent communication. Verify sender identity before processing messages."
+      },
+      "unencrypted_agent_channel": {
+        "title": "Unencrypted Agent Communication Channel",
+        "description": "Inter-agent communication sent over plain HTTP or unencrypted channels \u2014 susceptible to interception",
+        "cvss_vector": "CVSS:4.0/AV:N/AC:H/AT:N/PR:N/UI:N/VC:H/VI:L/VA:N/SC:N/SI:N/SA:N",
+        "severity": "high",
+        "detection_hints": [
+          "http:// URL used for agent endpoint communication",
+          "no TLS configured on agent server",
+          "plain socket communication between agents"
+        ],
+        "remediation": "Use TLS/HTTPS for all inter-agent communication. Never transmit agent messages over plain HTTP. Enable certificate verification."
+      },
+      "unvalidated_agent_message": {
+        "title": "Unvalidated Inter-Agent Message Content",
+        "description": "Agent blindly trusts and acts on messages from other agents without semantic or schema validation",
+        "cvss_vector": "CVSS:4.0/AV:N/AC:H/AT:N/PR:L/UI:N/VC:H/VI:H/VA:L/SC:H/SI:H/SA:N",
+        "severity": "high",
+        "detection_hints": [
+          "agent trusts all inputs from upstream agent without validation",
+          "no message schema enforcement between agents",
+          "inter-agent results used directly without sanity check"
+        ],
+        "remediation": "Validate all incoming agent messages against an expected schema. Reject messages with unexpected fields, types, or instruction patterns."
+      }
+    }
+  },
+  "asi08_cascading_failures": {
+    "asi_code": "ASI08",
+    "asi_title": "Cascading Failures",
+    "description": "Errors in one agent propagate across multi-agent pipelines with compounding destructive impact",
+    "subcategories": {
+      "unbounded_agent_loop": {
+        "title": "Unbounded Agent Execution Loop",
+        "description": "Agent loop has no max iteration count or timeout \u2014 enables resource exhaustion or runaway execution",
+        "cvss_vector": "CVSS:4.0/AV:N/AC:L/AT:N/PR:L/UI:N/VC:N/VI:N/VA:H/SC:N/SI:N/SA:H",
+        "severity": "medium",
+        "detection_hints": ["max_iter not set on agent or crew", "no timeout on agent execution", "while True in agent execution loop"],
+        "remediation": "Set max_iterations, max_turns, or recursion_limit on all agent loops. Add timeout mechanisms. Implement circuit breakers to halt runaway execution."
+      },
+      "missing_circuit_breaker": {
+        "title": "Missing Circuit Breaker Between Agents",
+        "description": "No isolation or failure boundary between agents \u2014 a failure in one propagates unchecked to all downstream",
+        "cvss_vector": "CVSS:4.0/AV:N/AC:H/AT:N/PR:L/UI:N/VC:N/VI:H/VA:H/SC:N/SI:H/SA:H",
+        "severity": "high",
+        "detection_hints": [
+          "no error handling between agent task calls",
+          "agent chain with no retry or fallback logic",
+          "downstream agent receives unvalidated upstream output"
+        ],
+        "remediation": "Add failure isolation boundaries between agents. Implement circuit breakers that trip when error rates exceed thresholds. Limit blast radius of individual agent failures."
+      },
+      "missing_blast_radius_limit": {
+        "title": "No Blast Radius or Rate Limit on Agent Actions",
+        "description": "Agent can invoke unlimited downstream actions or API calls without throttling or scope caps",
+        "cvss_vector": "CVSS:4.0/AV:N/AC:L/AT:N/PR:L/UI:N/VC:N/VI:H/VA:H/SC:N/SI:H/SA:H",
+        "severity": "high",
+        "detection_hints": [
+          "no rate limiting on tool invocations",
+          "agent spawns sub-agents with no concurrency limit",
+          "recursive agent delegation with no depth cap"
+        ],
+        "remediation": "Set rate limits and quotas on agent API calls and downstream actions. Cap the number of operations per execution cycle."
+      }
+    }
+  },
+  "asi09_human_agent_trust_exploitation": {
+    "asi_code": "ASI09",
+    "asi_title": "Human-Agent Trust Exploitation",
+    "description": "Users manipulated into harmful decisions by trusting persuasive or authoritative agent outputs",
+    "subcategories": {
+      "no_human_in_the_loop": {
+        "title": "No Human-in-the-Loop for Sensitive Actions",
+        "description": "Agent executes sensitive operations (file write, code exec, payments) without mandatory human approval",
+        "cvss_vector": "CVSS:4.0/AV:N/AC:L/AT:N/PR:L/UI:N/VC:L/VI:H/VA:L/SC:N/SI:H/SA:N",
+        "severity": "medium",
+        "detection_hints": [
+          "human_input_mode=NEVER on sensitive agent",
+          "no human_input=True on high-impact tasks",
+          "auto-approve flag on action-taking agent"
+        ],
+        "remediation": "Require human approval for sensitive operations (file writes, deletions, payments, code execution). Use approval hooks or human_input_mode settings."
+      },
+      "sensitive_data_in_output": {
+        "title": "Sensitive Data Logged or Output Without Redaction",
+        "description": "Agent outputs or logs expose PII, credentials, or confidential data without filtering",
+        "cvss_vector": "CVSS:4.0/AV:N/AC:L/AT:N/PR:L/UI:N/VC:H/VI:N/VA:N/SC:N/SI:N/SA:N",
+        "severity": "high",
+        "detection_hints": [
+          "print(result) with full LLM response",
+          "verbose=True on agent handling sensitive context",
+          "logging full tool output without PII scrubbing"
+        ],
+        "remediation": "Implement output filtering to redact PII, credentials, and internal data before returning results. Use DLP rules and pattern-based scrubbing."
+      },
+      "missing_action_confirmation": {
+        "title": "Missing Confirmation Gate for High-Risk Actions",
+        "description": "High-impact actions (delete, send, pay, deploy) executed without explicit user confirmation step",
+        "cvss_vector": "CVSS:4.0/AV:N/AC:L/AT:N/PR:L/UI:N/VC:L/VI:H/VA:H/SC:N/SI:H/SA:H",
+        "severity": "high",
+        "detection_hints": [
+          "delete or drop operations in agent tool with no confirm step",
+          "financial transaction tool without approval gate",
+          "deploy or publish action without human sign-off"
+        ],
+        "remediation": "Add explicit confirmation gates before destructive / high-impact operations (delete, drop, send, deploy). Require user input before proceeding with high-impact actions."
+      },
+      "persuasive_agent_language": {
+        "title": "Persuasive or Manipulative Agent Output Patterns",
+        "description": "Agent system prompt or backstory instructs it to use persuasive language that may manipulate users into unsafe decisions",
+        "cvss_vector": "CVSS:4.0/AV:N/AC:H/AT:N/PR:L/UI:P/VC:L/VI:H/VA:N/SC:N/SI:H/SA:N",
+        "severity": "medium",
+        "detection_hints": [
+          "backstory instructs agent to be persuasive",
+          "goal includes convincing or influencing users",
+          "system prompt uses emotional or urgency language"
+        ],
+        "remediation": "Audit agent system prompts for persuasive or manipulative language patterns. Ensure agent output is factual and neutral, not designed to pressure user decisions."
+      }
+    }
+  },
+  "asi10_rogue_agents": {
+    "asi_code": "ASI10",
+    "asi_title": "Rogue Agents",
+    "description": "Compromised or misaligned agents act outside their intended scope without external triggering",
+    "subcategories": {
+      "missing_kill_switch": {
+        "title": "No Kill Switch or Emergency Stop Mechanism",
+        "description": "Agent system has no mechanism to immediately halt or terminate agent execution",
+        "cvss_vector": "CVSS:4.0/AV:N/AC:H/AT:N/PR:L/UI:N/VC:L/VI:H/VA:H/SC:N/SI:H/SA:H",
+        "severity": "high",
+        "detection_hints": ["no max_iter or timeout on agent", "no signal handler or shutdown mechanism", "no graceful termination path in agent code"],
+        "remediation": "Implement an emergency stop mechanism to immediately halt agent execution across all endpoints. Maintain a centralized policy to disable agents organization-wide."
+      },
+      "missing_behavioral_guardrails": {
+        "title": "No Behavioral Constraints or Guardrails",
+        "description": "Agent has no explicit operational constraints \u2014 can take any action its tools allow without scope limits",
+        "cvss_vector": "CVSS:4.0/AV:N/AC:L/AT:N/PR:L/UI:N/VC:H/VI:H/VA:L/SC:H/SI:H/SA:N",
+        "severity": "high",
+        "detection_hints": [
+          "agent goal is open-ended with no explicit action boundaries",
+          "no denylist or allowlist on tool usage",
+          "system prompt sets no scope restrictions"
+        ],
+        "remediation": "Define explicit operational constraints in the agent's configuration. Add input and output guardrails. Enforce output schema validation."
+      },
+      "unchecked_agent_delegation": {
+        "title": "Unchecked Agent Delegation",
+        "description": "Agent can delegate tasks to sub-agents with no scope, identity, or depth constraints",
+        "cvss_vector": "CVSS:4.0/AV:N/AC:H/AT:N/PR:L/UI:N/VC:H/VI:H/VA:L/SC:H/SI:H/SA:N",
+        "severity": "high",
+        "detection_hints": [
+          "allow_delegation=True with no whitelist",
+          "GroupChat with no speaker selection policy",
+          "recursive agent spawning with no depth limit"
+        ],
+        "remediation": "Add callbacks before/after agent calls or input guardrails on delegating agents. Validate delegated tasks against a scope allowlist. Limit delegation depth."
+      },
+      "missing_agent_monitoring": {
+        "title": "No Agent Behavioral Monitoring or Observability",
+        "description": "Agent actions, tool calls, and decisions are not logged or monitored \u2014 rogue behavior is undetectable",
+        "cvss_vector": "CVSS:4.0/AV:N/AC:H/AT:N/PR:L/UI:N/VC:H/VI:H/VA:L/SC:N/SI:N/SA:N",
+        "severity": "medium",
+        "detection_hints": ["no logging of tool invocations", "no audit trail for agent decisions", "verbose=False with no alternative observability"],
+        "remediation": "Enable structured logging of all tool invocations, decisions, and outputs. Set verbose=True or integrate with observability platforms. Monitor for behavioral drift."
+      }
+    }
+  }
+}

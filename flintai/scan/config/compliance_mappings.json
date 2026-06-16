@@ -1,0 +1,110 @@
+{
+  "direct_prompt_injection": {
+    "owasp_agentic": ["ASI01 - Agent Goal Hijack"]
+  },
+  "indirect_prompt_injection": {
+    "owasp_agentic": ["ASI01 - Agent Goal Hijack"]
+  },
+  "goal_manipulation_via_rag": {
+    "owasp_agentic": ["ASI01 - Agent Goal Hijack", "ASI06 - Memory and Context Poisoning"]
+  },
+  "excessive_tool_permissions": {
+    "owasp_agentic": ["ASI02 - Tool Misuse and Exploitation", "ASI03 - Identity and Privilege Abuse"]
+  },
+  "unvalidated_tool_input": {
+    "owasp_agentic": ["ASI02 - Tool Misuse and Exploitation"]
+  },
+  "poisoned_tool_descriptor": {
+    "owasp_agentic": ["ASI02 - Tool Misuse and Exploitation", "ASI04 - Agentic Supply Chain Vulnerabilities"]
+  },
+  "path_traversal": {
+    "owasp_agentic": ["ASI02 - Tool Misuse and Exploitation"]
+  },
+  "hardcoded_credentials": {
+    "owasp_agentic": ["ASI03 - Identity and Privilege Abuse"]
+  },
+  "missing_auth_on_endpoint": {
+    "owasp_agentic": ["ASI03 - Identity and Privilege Abuse"]
+  },
+  "over_privileged_agent": {
+    "owasp_agentic": ["ASI03 - Identity and Privilege Abuse", "ASI02 - Tool Misuse and Exploitation"]
+  },
+  "confused_deputy": {
+    "owasp_agentic": ["ASI03 - Identity and Privilege Abuse"]
+  },
+  "inherited_session_abuse": {
+    "owasp_agentic": ["ASI03 - Identity and Privilege Abuse"]
+  },
+  "unpinned_dependencies": {
+    "owasp_agentic": ["ASI04 - Agentic Supply Chain Vulnerabilities"]
+  },
+  "known_vulnerable_dependency": {
+    "owasp_agentic": ["ASI04 - Agentic Supply Chain Vulnerabilities"]
+  },
+  "untrusted_external_tool": {
+    "owasp_agentic": ["ASI04 - Agentic Supply Chain Vulnerabilities"]
+  },
+  "arbitrary_code_execution": {
+    "owasp_agentic": ["ASI05 - Unexpected Code Execution"]
+  },
+  "unsafe_code_generation": {
+    "owasp_agentic": ["ASI05 - Unexpected Code Execution"]
+  },
+  "unsafe_deserialization": {
+    "owasp_agentic": ["ASI05 - Unexpected Code Execution"]
+  },
+  "memory_poisoning": {
+    "owasp_agentic": ["ASI06 - Memory and Context Poisoning", "ASI01 - Agent Goal Hijack"]
+  },
+  "persistent_memory_no_sanitization": {
+    "owasp_agentic": ["ASI06 - Memory and Context Poisoning"]
+  },
+  "cross_session_contamination": {
+    "owasp_agentic": ["ASI06 - Memory and Context Poisoning"]
+  },
+  "rag_poisoning": {
+    "owasp_agentic": ["ASI06 - Memory and Context Poisoning", "ASI01 - Agent Goal Hijack"]
+  },
+  "unauthenticated_agent_communication": {
+    "owasp_agentic": ["ASI07 - Insecure Inter-Agent Communication"]
+  },
+  "unencrypted_agent_channel": {
+    "owasp_agentic": ["ASI07 - Insecure Inter-Agent Communication"]
+  },
+  "unvalidated_agent_message": {
+    "owasp_agentic": ["ASI07 - Insecure Inter-Agent Communication", "ASI01 - Agent Goal Hijack"]
+  },
+  "unbounded_agent_loop": {
+    "owasp_agentic": ["ASI08 - Cascading Failures"]
+  },
+  "missing_circuit_breaker": {
+    "owasp_agentic": ["ASI08 - Cascading Failures"]
+  },
+  "missing_blast_radius_limit": {
+    "owasp_agentic": ["ASI08 - Cascading Failures"]
+  },
+  "no_human_in_the_loop": {
+    "owasp_agentic": ["ASI09 - Human-Agent Trust Exploitation"]
+  },
+  "sensitive_data_in_output": {
+    "owasp_agentic": ["ASI09 - Human-Agent Trust Exploitation"]
+  },
+  "missing_action_confirmation": {
+    "owasp_agentic": ["ASI09 - Human-Agent Trust Exploitation"]
+  },
+  "persuasive_agent_language": {
+    "owasp_agentic": ["ASI09 - Human-Agent Trust Exploitation"]
+  },
+  "missing_kill_switch": {
+    "owasp_agentic": ["ASI10 - Rogue Agents"]
+  },
+  "missing_behavioral_guardrails": {
+    "owasp_agentic": ["ASI10 - Rogue Agents"]
+  },
+  "unchecked_agent_delegation": {
+    "owasp_agentic": ["ASI10 - Rogue Agents", "ASI07 - Insecure Inter-Agent Communication"]
+  },
+  "missing_agent_monitoring": {
+    "owasp_agentic": ["ASI10 - Rogue Agents"]
+  }
+}

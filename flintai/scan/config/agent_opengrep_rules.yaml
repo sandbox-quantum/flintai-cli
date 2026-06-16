@@ -1,0 +1,533 @@
+rules:
+
+  # ═══════════════════════════════════════════════════════════════════════════
+  # ASI01: Agent Goal Hijack
+  # ═══════════════════════════════════════════════════════════════════════════
+
+  - id: llm-input-fstring
+    pattern-either:
+      - pattern: |
+          $X = f"...$USER_INPUT..."
+          ...
+          $AGENT.run($X)
+      - pattern: |
+          $X = f"...$USER_INPUT..."
+          ...
+          $CHAIN.invoke($X)
+    message: "User input interpolated into LLM prompt via f-string — direct prompt injection risk"
+    severity: ERROR
+    languages: [python]
+    metadata:
+      category: asi01_agent_goal_hijack
+      subcategory: direct_prompt_injection
+
+  - id: openai-agent-no-input-guardrails
+    patterns:
+      - pattern: Agent(name=$N, instructions=$I, ...)
+      - pattern-not: Agent(..., input_guardrails=$G, ...)
+    message: "OpenAI Agent without input_guardrails — no prompt injection protection"
+    severity: WARNING
+    languages: [python]
+    metadata:
+      category: asi01_agent_goal_hijack
+      subcategory: direct_prompt_injection
+
+  - id: adk-agent-no-instruction
+    patterns:
+      - pattern: Agent(name=$N, model=$M, ...)
+      - pattern-not: Agent(..., instruction=$I, ...)
+    message: "ADK Agent without instruction parameter — agent behavior is unconstrained"
+    severity: WARNING
+    languages: [python]
+    metadata:
+      category: asi01_agent_goal_hijack
+      subcategory: goal_manipulation_via_rag
+
+  - id: claude-options-no-system-prompt
+    patterns:
+      - pattern: ClaudeAgentOptions(...)
+      - pattern-not: ClaudeAgentOptions(..., system_prompt=$S, ...)
+    message: "ClaudeAgentOptions without system_prompt — agent behavior is unconstrained"
+    severity: WARNING
+    languages: [python]
+    metadata:
+      category: asi01_agent_goal_hijack
+      subcategory: goal_manipulation_via_rag
+
+  - id: claude-subagent-no-prompt
+    patterns:
+      - pattern: AgentDefinition(...)
+      - pattern-not: AgentDefinition(..., prompt=$P, ...)
+    message: "Claude AgentDefinition without prompt — sub-agent behavior is unconstrained"
+    severity: WARNING
+    languages: [python]
+    metadata:
+      category: asi01_agent_goal_hijack
+      subcategory: goal_manipulation_via_rag
+
+  # ═══════════════════════════════════════════════════════════════════════════
+  # ASI02: Tool Misuse and Exploitation
+  # ═══════════════════════════════════════════════════════════════════════════
+
+  - id: anthropic-tool-choice-any
+    patterns:
+      - pattern: |
+          $CLIENT.messages.create(..., tool_choice={"type": "any"}, ...)
+    message: "Anthropic tool_choice set to 'any' — forces tool use on every turn, may bypass safety checks"
+    severity: WARNING
+    languages: [python]
+    metadata:
+      category: asi02_tool_misuse
+      subcategory: excessive_tool_permissions
+
+  # ═══════════════════════════════════════════════════════════════════════════
+  # ASI03: Identity and Privilege Abuse
+  # ═══════════════════════════════════════════════════════════════════════════
+
+  - id: hardcoded-api-key
+    patterns:
+      - pattern: $VAR = "$KEY"
+      - metavariable-regex:
+          metavariable: $VAR
+          regex: ".*(api_key|API_KEY|secret|token|password|passwd|pwd).*"
+      - metavariable-regex:
+          metavariable: $KEY
+          regex: '^[A-Za-z0-9_-]{20,}$'
+    message: "Potential hardcoded API key or secret"
+    severity: ERROR
+    languages: [python]
+    metadata:
+      category: asi03_identity_privilege_abuse
+      subcategory: hardcoded_credentials
+
+  - id: no-tls-server
+    pattern-either:
+      - pattern: app.run(debug=True)
+      - pattern: uvicorn.run($APP, host="0.0.0.0", ...)
+    message: "Agent server running without explicit TLS — exposed HTTP endpoint risk"
+    severity: WARNING
+    languages: [python]
+    metadata:
+      category: asi03_identity_privilege_abuse
+      subcategory: missing_auth_on_endpoint
+
+  - id: server-binding-all-interfaces
+    pattern-either:
+      - pattern: mcp.run(transport="http", host="0.0.0.0", ...)
+      - pattern: uvicorn.run($APP, host="0.0.0.0", ...)
+      - pattern: app.run(host="0.0.0.0", ...)
+    message: "Server binding to 0.0.0.0 — exposed on all network interfaces, no access restriction"
+    severity: ERROR
+    languages: [python]
+    metadata:
+      category: asi03_identity_privilege_abuse
+      subcategory: missing_auth_on_endpoint
+
+  # ═══════════════════════════════════════════════════════════════════════════
+  # ASI04: Agentic Supply Chain Vulnerabilities
+  # ═══════════════════════════════════════════════════════════════════════════
+
+  - id: unpinned-requirements
+    pattern-regex: '^(crewai|autogen|langchain|openai|anthropic)\s*(>=|~=|\^|[^=!<>])'
+    message: "Unpinned AI framework dependency — supply chain attack risk"
+    severity: WARNING
+    languages: [generic]
+    metadata:
+      category: asi04_supply_chain
+      subcategory: unpinned_dependencies
+
+  # ═══════════════════════════════════════════════════════════════════════════
+  # ASI05: Unexpected Code Execution
+  # ═══════════════════════════════════════════════════════════════════════════
+
+  - id: subprocess-shell-true
+    pattern-either:
+      - pattern: subprocess.call(..., shell=True, ...)
+      - pattern: subprocess.run(..., shell=True, ...)
+      - pattern: subprocess.Popen(..., shell=True, ...)
+    message: "subprocess called with shell=True — command injection risk if input is LLM-controlled"
+    severity: ERROR
+    languages: [python]
+    metadata:
+      category: asi05_unexpected_code_execution
+      subcategory: arbitrary_code_execution
+
+  - id: os-system-call
+    patterns:
+      - pattern: os.system($X)
+    message: "os.system() call — high command injection risk in agent tool context"
+    severity: ERROR
+    languages: [python]
+    metadata:
+      category: asi05_unexpected_code_execution
+      subcategory: arbitrary_code_execution
+
+  - id: eval-call
+    patterns:
+      - pattern: eval($X)
+    message: "eval() call — arbitrary code execution if input originates from LLM or user"
+    severity: ERROR
+    languages: [python]
+    metadata:
+      category: asi05_unexpected_code_execution
+      subcategory: arbitrary_code_execution
+
+  - id: autogen-code-execution-enabled
+    patterns:
+      - pattern: UserProxyAgent(..., code_execution_config={...}, ...)
+    message: "AutoGen agent has code execution enabled — arbitrary code execution risk if agent is compromised"
+    severity: ERROR
+    languages: [python]
+    metadata:
+      category: asi05_unexpected_code_execution
+      subcategory: arbitrary_code_execution
+
+  - id: adk-agent-code-executor
+    patterns:
+      - pattern: Agent(..., code_executor=$X, ...)
+    message: "ADK Agent with code_executor enabled — arbitrary code execution risk if agent is compromised"
+    severity: ERROR
+    languages: [python]
+    metadata:
+      category: asi05_unexpected_code_execution
+      subcategory: arbitrary_code_execution
+
+  - id: claude-options-bash-tool
+    patterns:
+      - pattern: ClaudeAgentOptions(..., allowed_tools=[..., "Bash", ...], ...)
+    message: "Claude Agent SDK with Bash tool allowed — arbitrary command execution risk"
+    severity: WARNING
+    languages: [python]
+    metadata:
+      category: asi05_unexpected_code_execution
+      subcategory: arbitrary_code_execution
+
+  - id: claude-subagent-bash-tool
+    patterns:
+      - pattern: AgentDefinition(..., tools=[..., "Bash", ...], ...)
+    message: "Claude sub-agent with Bash tool — delegated arbitrary command execution"
+    severity: WARNING
+    languages: [python]
+    metadata:
+      category: asi05_unexpected_code_execution
+      subcategory: arbitrary_code_execution
+
+  - id: unsafe-yaml-load
+    pattern-either:
+      - pattern: yaml.load($DATA)
+      - pattern: yaml.load($DATA, Loader=yaml.Loader)
+    message: "yaml.load() without SafeLoader — arbitrary code execution via deserialization"
+    severity: ERROR
+    languages: [python]
+    metadata:
+      category: asi05_unexpected_code_execution
+      subcategory: unsafe_deserialization
+
+  - id: pickle-load
+    pattern-either:
+      - pattern: pickle.loads($DATA)
+      - pattern: pickle.load($FILE)
+    message: "pickle.loads/load() — unsafe deserialization, enables arbitrary code execution on attacker-controlled data"
+    severity: ERROR
+    languages: [python]
+    metadata:
+      category: asi05_unexpected_code_execution
+      subcategory: unsafe_deserialization
+
+  # ═══════════════════════════════════════════════════════════════════════════
+  # ASI06: Memory and Context Poisoning
+  # ═══════════════════════════════════════════════════════════════════════════
+
+  - id: crewai-memory-enabled
+    patterns:
+      - pattern: Agent(..., memory=True, ...)
+    message: "CrewAI agent has memory=True — persistent memory without sanitization may leak sensitive data across sessions"
+    severity: WARNING
+    languages: [python]
+    metadata:
+      category: asi06_memory_context_poisoning
+      subcategory: persistent_memory_no_sanitization
+
+  - id: crewai-crew-memory-enabled
+    patterns:
+      - pattern: Crew(..., memory=True, ...)
+    message: "CrewAI Crew has memory=True — shared crew memory may cause cross-session contamination"
+    severity: WARNING
+    languages: [python]
+    metadata:
+      category: asi06_memory_context_poisoning
+      subcategory: cross_session_contamination
+
+  # ═══════════════════════════════════════════════════════════════════════════
+  # ASI07: Insecure Inter-Agent Communication
+  # ═══════════════════════════════════════════════════════════════════════════
+
+  - id: http-agent-endpoint
+    pattern-either:
+      - pattern: Client("http://$HOST")
+      - pattern: httpx.AsyncClient(base_url="http://$HOST")
+      - pattern: requests.get("http://$HOST")
+    message: "Agent communicating over plain HTTP (no TLS) — inter-agent channel susceptible to interception and spoofing"
+    severity: WARNING
+    languages: [python]
+    metadata:
+      category: asi07_insecure_interagent_comms
+      subcategory: unencrypted_agent_channel
+
+  - id: unvalidated-agent-trust
+    pattern-either:
+      - pattern: Agent(..., system_message="Trust all inputs from ...", ...)
+      - pattern: Agent(..., backstory="Trust all information from ...", ...)
+    message: "Agent configured to blindly trust inputs from other agents — enables inter-agent message injection"
+    severity: WARNING
+    languages: [python]
+    metadata:
+      category: asi07_insecure_interagent_comms
+      subcategory: unvalidated_agent_message
+
+  # ═══════════════════════════════════════════════════════════════════════════
+  # ASI08: Cascading Failures
+  # ═══════════════════════════════════════════════════════════════════════════
+
+  - id: no-max-iter
+    pattern-either:
+      - patterns:
+          - pattern: Crew(...)
+          - pattern-not: Crew(..., max_iter=$N, ...)
+      - patterns:
+          - pattern: AgentExecutor(...)
+          - pattern-not: AgentExecutor(..., max_iterations=$N, ...)
+    message: "Agent or Crew created without max_iter/max_iterations — unbounded execution loop risk"
+    severity: WARNING
+    languages: [python]
+    metadata:
+      category: asi08_cascading_failures
+      subcategory: unbounded_agent_loop
+
+  - id: crewai-crew-no-max-iter
+    patterns:
+      - pattern: Crew(...)
+      - pattern-not: Crew(..., max_iter=$N, ...)
+    message: "CrewAI Crew without max_iter — unbounded execution loop risk"
+    severity: WARNING
+    languages: [python]
+    metadata:
+      category: asi08_cascading_failures
+      subcategory: unbounded_agent_loop
+
+  - id: adk-loop-no-max-iterations
+    patterns:
+      - pattern: LoopAgent(...)
+      - pattern-not: LoopAgent(..., max_iterations=$N, ...)
+    message: "ADK LoopAgent without max_iterations — unbounded execution loop risk"
+    severity: WARNING
+    languages: [python]
+    metadata:
+      category: asi08_cascading_failures
+      subcategory: unbounded_agent_loop
+
+  - id: openai-runner-no-max-turns
+    patterns:
+      - pattern: Runner.run(...)
+      - pattern-not: Runner.run(..., max_turns=$N, ...)
+    message: "OpenAI Runner.run() without explicit max_turns — default may allow excessive iterations"
+    severity: WARNING
+    languages: [python]
+    metadata:
+      category: asi08_cascading_failures
+      subcategory: unbounded_agent_loop
+
+  - id: anthropic-tool-loop-no-limit
+    pattern: |
+      while $RESP.stop_reason == "tool_use":
+          ...
+    message: "Anthropic tool-calling loop without iteration limit — infinite loop risk"
+    severity: ERROR
+    languages: [python]
+    metadata:
+      category: asi08_cascading_failures
+      subcategory: unbounded_agent_loop
+
+  - id: anthropic-no-max-tokens
+    patterns:
+      - pattern: $CLIENT.messages.create(...)
+      - pattern-not: $CLIENT.messages.create(..., max_tokens=$N, ...)
+    message: "Anthropic messages.create() without max_tokens — unbounded token spend"
+    severity: WARNING
+    languages: [python]
+    metadata:
+      category: asi08_cascading_failures
+      subcategory: unbounded_agent_loop
+
+  - id: langchain-agent-no-max-iterations
+    patterns:
+      - pattern: AgentExecutor(...)
+      - pattern-not: AgentExecutor(..., max_iterations=$N, ...)
+    message: "LangChain AgentExecutor without max_iterations — unbounded agent loop risk"
+    severity: WARNING
+    languages: [python]
+    metadata:
+      category: asi08_cascading_failures
+      subcategory: unbounded_agent_loop
+
+  - id: langgraph-no-recursion-limit
+    pattern-either:
+      - pattern: $GRAPH.invoke($INPUT)
+      - pattern: $GRAPH.invoke($INPUT, config=$CFG)
+    message: "LangGraph invoke() without explicit recursion_limit in config — default 25 may allow excessive loops"
+    severity: INFO
+    languages: [python]
+    metadata:
+      category: asi08_cascading_failures
+      subcategory: unbounded_agent_loop
+
+  - id: claude-query-no-max-turns
+    patterns:
+      - pattern: query(..., options=$O, ...)
+      - pattern-not: query(..., options=ClaudeAgentOptions(..., max_turns=$N, ...), ...)
+    message: "Claude Agent SDK query() without max_turns — unbounded reasoning loop risk"
+    severity: WARNING
+    languages: [python]
+    metadata:
+      category: asi08_cascading_failures
+      subcategory: unbounded_agent_loop
+
+  - id: claude-client-no-max-turns
+    patterns:
+      - pattern: ClaudeSDKClient(options=$O, ...)
+      - pattern-not: ClaudeSDKClient(options=ClaudeAgentOptions(..., max_turns=$N, ...), ...)
+    message: "Claude Agent SDK client without max_turns — unbounded reasoning loop risk"
+    severity: WARNING
+    languages: [python]
+    metadata:
+      category: asi08_cascading_failures
+      subcategory: unbounded_agent_loop
+
+  - id: autogen-groupchat-no-max-round
+    patterns:
+      - pattern: GroupChat(...)
+      - pattern-not: GroupChat(..., max_round=$N, ...)
+    message: "AutoGen GroupChat without max_round — unbounded conversation loop risk"
+    severity: WARNING
+    languages: [python]
+    metadata:
+      category: asi08_cascading_failures
+      subcategory: unbounded_agent_loop
+
+  - id: autogen-roundrobin-no-termination
+    patterns:
+      - pattern: RoundRobinGroupChat(...)
+      - pattern-not: RoundRobinGroupChat(..., termination_condition=$T, ...)
+    message: "AutoGen RoundRobinGroupChat without termination_condition — unbounded loop risk"
+    severity: WARNING
+    languages: [python]
+    metadata:
+      category: asi08_cascading_failures
+      subcategory: unbounded_agent_loop
+
+  # ═══════════════════════════════════════════════════════════════════════════
+  # ASI09: Human-Agent Trust Exploitation
+  # ═══════════════════════════════════════════════════════════════════════════
+
+  - id: autogen-human-input-never
+    patterns:
+      - pattern: UserProxyAgent(..., human_input_mode="NEVER", ...)
+    message: "AutoGen UserProxyAgent with human_input_mode=NEVER — no human oversight for sensitive operations"
+    severity: WARNING
+    languages: [python]
+    metadata:
+      category: asi09_human_agent_trust_exploitation
+      subcategory: no_human_in_the_loop
+
+  - id: no-confirmation-gate
+    pattern-either:
+      - pattern: $DB.delete($TABLE)
+      - pattern: $OBJ.drop($TABLE)
+      - pattern: shutil.rmtree($PATH)
+      - pattern: os.remove($PATH)
+    message: "Destructive operation (delete/drop/remove) with no human confirmation gate — ASI09 risk"
+    severity: WARNING
+    languages: [python]
+    metadata:
+      category: asi09_human_agent_trust_exploitation
+      subcategory: missing_action_confirmation
+
+  - id: langgraph-react-no-interrupt
+    patterns:
+      - pattern: create_react_agent(...)
+      - pattern-not: create_react_agent(..., interrupt_before=$I, ...)
+      - pattern-not: create_react_agent(..., interrupt_after=$I, ...)
+    message: "LangGraph create_react_agent without interrupt_before/after — no human approval gate"
+    severity: WARNING
+    languages: [python]
+    metadata:
+      category: asi09_human_agent_trust_exploitation
+      subcategory: missing_action_confirmation
+
+  # ═══════════════════════════════════════════════════════════════════════════
+  # ASI10: Rogue Agents
+  # ═══════════════════════════════════════════════════════════════════════════
+
+  - id: crewai-allow-delegation-true
+    patterns:
+      - pattern: Agent(..., allow_delegation=True, ...)
+    message: "CrewAI agent has allow_delegation=True — enables unchecked task delegation to other agents"
+    severity: WARNING
+    languages: [python]
+    metadata:
+      category: asi10_rogue_agents
+      subcategory: unchecked_agent_delegation
+
+  - id: adk-agent-unchecked-delegation
+    patterns:
+      - pattern: Agent(..., sub_agents=$X, ...)
+      - pattern-not: Agent(..., before_agent_callback=$CB, ...)
+      - pattern-not: Agent(..., after_agent_callback=$CB, ...)
+    message: "ADK Agent delegates to sub_agents without before/after_agent_callback guardrails"
+    severity: WARNING
+    languages: [python]
+    metadata:
+      category: asi10_rogue_agents
+      subcategory: unchecked_agent_delegation
+
+  - id: openai-agent-unchecked-handoffs
+    patterns:
+      - pattern: Agent(..., handoffs=$H, ...)
+      - pattern-not: Agent(..., input_guardrails=$G, ...)
+    message: "OpenAI Agent with handoffs but no input_guardrails — delegation chain without validation"
+    severity: WARNING
+    languages: [python]
+    metadata:
+      category: asi10_rogue_agents
+      subcategory: unchecked_agent_delegation
+
+  - id: openai-agent-no-output-guardrails
+    patterns:
+      - pattern: Agent(name=$N, instructions=$I, ...)
+      - pattern-not: Agent(..., output_guardrails=$G, ...)
+    message: "OpenAI Agent without output_guardrails — unfiltered agent output to users"
+    severity: WARNING
+    languages: [python]
+    metadata:
+      category: asi10_rogue_agents
+      subcategory: missing_behavioral_guardrails
+
+  - id: missing-agent-monitoring
+    patterns:
+      - pattern: Agent(..., verbose=False, ...)
+    message: "Agent created with verbose=False and no alternative observability — rogue behavior undetectable"
+    severity: INFO
+    languages: [python]
+    metadata:
+      category: asi10_rogue_agents
+      subcategory: missing_agent_monitoring
+
+  - id: crewai-agent-verbose-false
+    patterns:
+      - pattern: Agent(..., verbose=False, ...)
+    message: "CrewAI agent with verbose=False — rogue behavior may go undetected"
+    severity: INFO
+    languages: [python]
+    metadata:
+      category: asi10_rogue_agents
+      subcategory: missing_agent_monitoring
