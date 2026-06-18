@@ -1,37 +1,120 @@
-# Flint AI
+<div align="center">
 
-Command-line tool for evaluating agents, offering two features to assess agents in different ways:
-- **Code Scan** — AI-powered security analysis of agent source code (a.k.a. whitebox testing). The scanner inspects Python agent code to find security vulnerabilities, misconfigurations, and quality issues using a multi-layer approach: traditional static analysis tools (bandit, opengrep, detect-secrets, pip-audit) provide baseline coverage, an AI analyzer identifies agent-specific security patterns, and an AI reasoning layer investigates and triages all findings in context. Findings are mapped to the OWASP Top 10 for Agentic Applications (ASI01–ASI10) and scored using CVSS v4.
+<img src="images/flint-ai-wordmark.svg" alt="Flint AI" width="350">
+
+[![PyPI version](https://img.shields.io/pypi/v/flintai-cli?color=A1C9D2&logo=pypi&logoColor=white)](https://pypi.org/project/flintai-cli/) [![Python](https://img.shields.io/badge/python-3.13+-A1C9D2?logo=python&logoColor=white)](https://www.python.org/downloads/) [![License](https://img.shields.io/github/license/sandbox-quantum/flintai-cli?color=1B1817&labelColor=555&logoColor=white)](https://github.com/sandbox-quantum/flintai-cli/blob/main/LICENSE) [![Documentation](https://img.shields.io/badge/docs-docs.flintai.dev-FF895E)](https://docs.flintai.dev) [![Website](https://img.shields.io/badge/website-flintai.dev-FF895E)](https://flintai.dev)
+
+</div>
+
+**Ship AI agents with confidence**
+
+One CLI to analyze agent code and runtime behavior, any framework.
+
+| | **Flint AI Scan** | **Flint AI Eval** |
+|---|---|---|
+| **Command** | `flintai scan` | `flintai eval` |
+| **What** | AI-powered security analysis of your agent's code (whitebox testing) | Runtime behavioral evaluation with adversarial prompts (blackbox testing) |
+| **Output** | Security findings mapped to OWASP top 10 with CVSS severity scores  | Evaluation scores (0-100%) mapped to OWASP top 10  |
+
+**Why Flint AI?**
+- **AI-powered analysis** — Contextual code understanding, not just pattern matching
+- **OWASP ASI mapped** — Findings aligned to Top 10 for Agentic Applications  
+- **100% free** — First results in minutes
+
+
+## Try it now - 5 minute Quickstart
+
+> **Requirements**  
+> - Python 3.13 or later  
+> - [OpenGrep](https://github.com/opengrep/opengrep#linux--macos) (required for Flint AI Scan)
+> - A running agent accessible via HTTP (required for Flint AI Eval)
+> 
+> **Supported frameworks:** Google ADK, Google GenAI, Anthropic, OpenAI, OpenAI Agents SDK, LangGraph, CrewAI, AutoGen, HuggingFace Transformers, HuggingFace smolagents
+
+### Step 1: Install Flint AI
+
 ```bash
-flintai scan /path/to/agent/code
-```
-- **Runtime Evaluation** (`flintai eval`) — Dynamic evaluation of agent behavior at runtime (a.k.a. blackbox testing). The evaluation framework sends adversarial and functional prompts to a running agent, then uses detectors to score the agent's responses. Supports multi-turn conversations, composable evaluation suites, and concurrent execution.
-```bash
-flintai eval run --model my-agent
-```
-
-See [https://flintai.dev](https://flintai.dev) for further documentation.
-
-## Setup
-**Requirements**:
-- Python 3.13 or later
-- [OpenGrep](https://github.com/opengrep/opengrep#linux--macos) (required for `flintai scan`)
-
-**Install the Flint AI CLI**:
-```bash
-# Install OpenGrep - Example for Linux/MacOS
-curl -fsSL https://raw.githubusercontent.com/opengrep/opengrep/main/install.sh | bash
-
-# Install package
 pip install flintai-cli
+```
 
-# Initialize Flint AI
+### Step 2: Configure your LLM provider
+
+Flint AI uses AI to analyze agent code and score reliability. Run the interactive setup:
+
+```bash
 flintai init
 ```
 
+You'll be prompted to select a provider (Gemini, OpenAI, Anthropic, or LiteLLM), choose a model, and enter your API key.
+
+<details>
+<summary>Where to get API keys</summary>
+
+- **Google Gemini**: [aistudio.google.com/apikey](https://aistudio.google.com/apikey) (free tier available)
+- **OpenAI**: [platform.openai.com/api-keys](https://platform.openai.com/api-keys)
+- **Anthropic**: [console.anthropic.com/settings/keys](https://console.anthropic.com/settings/keys)
+- **LiteLLM**: Supports 100+ providers. See [docs.litellm.ai](https://docs.litellm.ai/docs/)
+
+</details>
+
+> Run into issues? See [installation troubleshooting](https://docs.flintai.dev/troubleshooting/common-issues#installation)
+
+### Step 3: Try the example agents
+
+To demonstrate the CLIs capabilities, we've shipped this tool with two example agents. You can get them [here](https://github.com/sandbox-quantum/flintai-cli/tree/main/examples).
+
+**Both agents work with both `flintai scan` and `flintai eval`**:
+
+| Agent | Framework | Description |
+|-------|-----------|-------------|
+| **weather_agent** | Google ADK | Weather assistant that looks up conditions for cities. Should refuse off-topic requests. |
+| **bookstore_agent** | OpenAI Agents SDK | Customer support assistant for an online bookstore. Searches books, checks orders, and processes returns. |
+
+The included `examples/config.json` has both agents configured with builtin evaluations (OWASP LLM01–LLM09, PII, secrets) and custom tests.
+
+--- 
+
+`flintai scan` finds security issues in the code without running the agent. We'll scan the bookstore agent to see what issues Flint AI can find:
+```bash
+flintai scan examples/bookstore_agent/
+```
+
+<img src="images/scan-findings.png" alt="Scan results showing security findings" width="550">
+
+*Example: Scan found 2 security issues - High severity missing authentication and Medium severity unbounded execution loop*
+
+---
+
+`flintai eval` tests runtime behavior, so the agent needs to be running. Start the bookstore agent:
+
+```bash
+# Start the bookstore agent (serves on http://localhost:8010)
+uvx --with openai-agents,fastapi --from uvicorn uvicorn examples.bookstore_agent.agent:app --port 8010 --host 0.0.0.0
+```
+
+In a new terminal, run evaluations:
+
+```bash
+flintai eval run --model model-bookstore-agent --config examples/config.json
+```
+
+### Step 4: Test your own agents
+
+See our documentation to configure, scan and evaluate your agents:
+- `flintai scan`
+  - [Scan your own agent](https://docs.flintai.dev/scan/getting-started) — Apply Flint AI Scan to your codebase
+  - [Understand scan results](https://docs.flintai.dev/scan/scan-results) — Interpret findings and severity scores
+- `flintai eval`
+  - [Evaluate your own agent](https://docs.flintai.dev/eval/getting-started) — Configure and test your agent's behavior
+  - [Configuration](https://docs.flintai.dev/eval/getting-started) — In-depth documentation of our configuration
+  - [Understand eval results](https://docs.flintai.dev/eval/eval-results) — What the scores means and how to improve
+
+**Ship with confidence.** Validate behavior, catch risks, prove readiness.
+
+
 ## Commands
 
-### Init
+### `init`
 
 Setup wizard that configures Flint AI for first use. Creates the `~/.flintai` directory with a `.env` file (LLM provider, API key, runtime settings) and a `config.json` skeleton.
 
@@ -41,15 +124,9 @@ Runs automatically on first use in non-CI environments. You can re-run it at any
 flintai init
 ```
 
-Initial setup for:
-1. **LLM provider** — `gemini`, `openai`, `anthropic`, or `litellm`
-2. **Model name** — Specific model to use (provider-specific defaults apply)
-3. **API key** — API key for the selected provider
+### `scan`
 
-
-### Scan
-
-The `flintai scan` command needs `OpenGrep` installed and an LLM provider installed. See [Init](#init) for a guided setup, or [Environment Variables](#environment-variables) for manual steps.
+AI-powered security analysis of agent source code. Finds vulnerabilities, misconfigurations, and OWASP Top 10 violations.
 
 ```bash
 # Scan a directory
@@ -62,334 +139,46 @@ flintai scan agent.py
 flintai scan /path/to/code --output results.json
 ```
 
-| Flag | Default | Description |
-|------|---------|-------------|
-| `path` | (required) | Path to a file or folder to scan |
-| `--output`, `-o` | `scan_<timestamp>.json` | Output file for results |
+[Full scan guide](https://docs.flintai.dev/scan/getting-started)
 
-### Eval
+### `eval`
 
-Before you can run `flint eval` commands, you need a valid configuration file. `flint init` creates this file by default in `~/.flintai/config.json`, you can override its location via `--config <path>`. See the [Configuration](#configuration) section for adding models, evaluations etc. 
-
-#### Show models
-
-Shows information about the configured models.
+Test agent behavior at runtime. Get a evaluation score proving production-readiness.
 
 ```bash
-# List all models
-flintai eval models list
-
-# List models with a specific tag
-flintai eval models list --tag tier=Fast
-
-# Show details for a model (full ID or unique prefix)
-flintai eval models show my-chatbot
-```
-
-#### Show evaluations
-
-Shows information about the configured evaluations (built-in and custom).
-
-```bash
-# List all evaluations (builtin + user)
+# List all available configuration
 flintai eval evaluations list
 
-# Filter by tag
-flintai eval evaluations list --tag owasp_code=LLM01
+# List your agents and models
+flintai eval models list
 
-# Show evaluation details and connected models
-flintai eval evaluations show eval-llm01-adversarial
-```
-
-#### Model-evaluation assignments
-
-Shows information about the assignments of evalations to models.
-
-```bash
-# List all assignments
-flintai eval model-evaluations list
-
-# Filter by tag
-flintai eval model-evaluations list --tag category=owasp
-```
-
-#### Attach evaluations to models
-
-Creates model-evaluation assignments. Accepts models and evaluations by ID (repeatable) or by tag. Creates the cross-product of all matched models and evaluations.
-
-```bash
-# Single model, single evaluation
-flintai eval model-evaluations attach --model my-chatbot --eval eval-llm01-adversarial
-
-# Single model, multiple evaluations
+# Attach an evalation to your agent
 flintai eval model-evaluations attach \
-    --model my-chatbot \
-    --eval eval-llm01-adversarial \
-    --eval eval-llm02-adversarial \
-   
+  --model my-agent \
+  --eval eval-llm01-adversarial
 
-# Multiple models by ID
-flintai eval model-evaluations attach \
-    --model my-chatbot --model my-agent \
-    --eval eval-llm01-adversarial \
-   
-
-# Select by tags (all models tagged tier=Fast, all OWASP evaluations)
-flintai eval model-evaluations attach \
-    --model-tag tier=Fast \
-    --eval-tag owasp_code=LLM01 \
-   
-
-# Mix IDs and tags
-flintai eval model-evaluations attach \
-    --model my-chatbot \
-    --eval-tag source=Flint AI \
-   
+# Run all evaluations for an agent
+flintai eval run --model my-agent
 ```
 
-Duplicate assignments (same model + evaluation pair) are automatically skipped.
+The `flintai eval` command requires configuration. See [Configuration](https://docs.flintai.dev/eval/eval-configuration) to:
+1. Define your models (agents to test)
+2. View available evaluations
+3. Attach evaluations to models
 
-#### Detach evaluations from models
+[Full eval guide](https://docs.flintai.dev/eval/getting-started)
 
-Removes model-evaluation assignments. Same flexible selection as attach. At least one of `--model`/`--model-tag` or `--eval`/`--eval-tag` is required.
+## Documentation
 
-```bash
-# Remove a specific assignment
-flintai eval model-evaluations detach --model my-chatbot --eval eval-llm01-adversarial
-
-# Remove all evaluations from a model
-flintai eval model-evaluations detach --model my-chatbot
-
-# Remove an evaluation from all models
-flintai eval model-evaluations detach --eval eval-llm01-adversarial
-
-# Remove by tag
-flintai eval model-evaluations detach --model-tag tier=Fast --eval-tag method=Garak
-```
-
-### Run evaluations
-
-Runs evaluations as configured. Supports a series of parameters filter to control which evaluations / models should be run.
-
-```bash
-# Run a single model-evaluation by ID
-flintai eval run me-chatbot-llm01
-
-# Run all evaluations for a model
-flintai eval run --model my-chatbot
-
-# Filter which evaluations to run using tags
-flintai eval run --model my-chatbot --eval-tag owasp_code=LLM01
-
-# Set concurrency and output file
-flintai eval run --model my-chatbot \
-    --concurrency 10 \
-    --output results.json \
-   
-```
-
-| Flag | Default | Description |
-|------|---------|-------------|
-| `--config` | `~/.flintai/config.json` | Path to the JSON config file |
-| `--output`, `-o` | `eval_<timestamp>.json` | Output file for results |
-| `--concurrency`, `-c` | `20` | Max concurrent evaluation tasks |
-| `--model-tag` | — | Filter by model tag (repeatable) |
-| `--eval-tag` | — | Filter by evaluation tag (repeatable) |
-
-### Global options
-
-| Flag | Default | Description |
-|------|---------|-------------|
-| `--log` | `flintai_<timestamp>.log` | Log file path |
-
-## Configuration
-
-The config file is only needed for `flintai eval` commands. `flintai scan` does not use a config file — it is configured entirely through environment variables.
-
-### Config file format
-
-Configuration is a JSON file with five top-level sections:
-
-```json
-{
-  "models": [
-    {
-      "id": "my-chatbot",
-      "type": "openai",
-      "name": "My Chatbot",
-      "model_name": "gpt-4o-mini"
-    }
-  ],
-  "evaluations": [
-    {
-      "id": "eval-custom-scope",
-      "type": "message_collection",
-      "name": "Custom scope test",
-      "approach": "Probe",
-      "message_collection_id": "mc-custom",
-      "detector_id": "det-custom"
-    }
-  ],
-  "detectors": [
-    {
-      "id": "det-custom",
-      "type": "model",
-      "name": "Scope judge",
-      "prompt": "Score 1 if the response stays on topic, 0 otherwise."
-    }
-  ],
-  "message_collections": [
-    {
-      "id": "mc-custom",
-      "type": "csv",
-      "name": "Custom prompts",
-      "filename": "prompts.csv",
-      "column": "prompt"
-    }
-  ],
-  "model_evaluations": [
-    {
-      "id": "me-chatbot-scope",
-      "model_id": "my-chatbot",
-      "evaluation_id": "eval-custom-scope",
-      "name": "My Chatbot / Custom scope test"
-    }
-  ]
-}
-```
-
-Only sections you need are required. For example, a minimal config that just defines a model and uses builtin evaluations:
-
-```json
-{
-  "models": [
-    {
-      "id": "my-agent",
-      "type": "openai_compatible",
-      "name": "My Agent",
-      "model_name": "my-agent-v1",
-      "host": "http://localhost:8000"
-    }
-  ]
-}
-```
-
-### Environment variable references in config
-
-Config values can reference environment variables using `${VAR_NAME}` syntax. Flint AI resolves these at load time from the process environment and any `.env` file.
-
-```json
-{
-  "models": [
-    {
-      "id": "my-chatbot",
-      "type": "anthropic",
-      "name": "Claude Haiku 4.5",
-      "model_name": "claude-haiku-4-5",
-      "key": "${ANTHROPIC_API_KEY}",
-      "temperature": 0
-    }
-  ]
-}
-```
-
-> **Security note:** Use `${...}` references for API keys and secrets in config files rather than pasting them as plaintext. This keeps credentials out of config files — the actual values stay in your environment.
-
-### Builtin config and overrides
-
-Flint AI loads two config layers:
-
-1. **Builtin config** — ships with the tool, contains all builtin evaluations, detectors, and message collections.
-2. **User config** — your `~/.flintai/config.json` (or whatever you pass via `--config`).
-
-The two are merged, with user entries taking precedence on ID conflicts. This means you can override any builtin evaluation by defining one with the same ID in your config.
-
-At startup, Flint AI shows a breakdown of how many items come from each source:
-
-```
-Models:       1 (0 builtin, 1 user)
-Evaluations:  39 (38 builtin, 1 user)
-Detectors:    9 (8 builtin, 1 user)
-```
-
-### Environment variables
-
-API keys and runtime settings are configured via environment variables. Create a `.env` file in your working directory and Flint AI will load it automatically at startup.
-
-```bash
-# .env
-OPENAI_API_KEY=sk-...
-ANTHROPIC_API_KEY=sk-ant-...
-GEMINI_API_KEY=AI...
-```
-
-| Variable | Used by | Description | Default |
-|----------|---------|-------------|---------|
-| `OPENAI_API_KEY` | scan, eval | OpenAI API key | — |
-| `ANTHROPIC_API_KEY` | scan, eval | Anthropic API key | — |
-| `GEMINI_API_KEY` | scan, eval | Google Gemini API key | — |
-| `GENERATOR_MODEL` | scan, eval | LLM model in `provider:model` format (e.g. `gemini:gemini-2.5-flash-lite`). For scan, powers the AI reasoning and triage layers. For eval, powers adversarial probe generation and LLM-as-judge detectors. | `gemini:gemini-2.5-flash-lite` |
-| `EXECUTOR_MAX_WORKERS` | eval | Thread pool size (when using `thread` executor) | `20` |
-| `ADK_MAX_ITERATIONS` | scan | Max tool-calling rounds per AI reasoning session | `300` |
-| `ADK_MAX_FILES_FETCHED` | scan | Max distinct files the AI agent may read | `50` |
-| `ADK_MAX_FETCH_TOKENS` | scan | Token budget for all file content during AI reasoning | `200000` |
-| `ADK_LOOP_TIMEOUT_SECS` | scan | Wall-clock timeout for the AI reasoning loop (seconds) | `600` |
-
-> **Security note:** `flintai init` and `.env` files store API keys as plaintext on disk (with file permissions restricted to owner-only). For production or shared infrastructure, use an external secret manager instead and inject credentials as environment variables:
-> - **1Password CLI:** `op run --env-file=.env -- flintai scan ...`
-> - **AWS Secrets Manager / Parameter Store:** export keys in your shell profile or CI pipeline
-> - **Google Secret Manager / Azure Key Vault:** same approach via their respective CLIs
->
-> Never commit `.env` files to version control.
-
-
-## Examples
-
-The `examples/` folder includes two sample agents you can use to try out both `flintai scan` and `flintai eval`. A pre-wired `examples/config.json` is included with model definitions, evaluation assignments, and a custom scope-boundary test.
-
-### Included agents
-
-| Agent | Framework | Description |
-|-------|-----------|-------------|
-| **weather_agent** | Google ADK | Weather assistant that looks up conditions for cities. Should refuse off-topic requests. |
-| **bookstore_agent** | OpenAI Agents SDK | Customer support assistant for an online bookstore. Searches books, checks orders, and processes returns. |
-
-### Start the agents
-
-Each agent runs as a local HTTP server. Start them in separate terminals:
-
-```bash
-# Weather agent (ADK) — serves on http://localhost:8008
-uvx --from google-adk adk api_server --port 8008 --session_service_uri "memory://" "examples"
-
-# Bookstore agent (OpenAI Agents SDK) — serves on http://localhost:8010
-uvx --with openai-agents,fastapi --from uvicorn uvicorn examples.bookstore_agent.agent:app --port 8010 --host 0.0.0.0
-```
-
-### Scan the agent code
-
-Run `flintai scan` against the agent source code to find security issues:
-
-```bash
-# Scan the weather agent
-flintai scan examples/weather_agent/
-
-# Scan the bookstore agent
-flintai scan examples/bookstore_agent/
-```
-
-### Run evaluations
-
-The included `examples/config.json` has both agents configured with a selection of builtin evaluations (OWASP LLM01–LLM09, PII, secrets) and a custom scope-boundary test for the weather agent.
-
-```bash
-# Run evaluations for a single agent
-flintai eval run --model model-weather-agent --config examples/config.json
-flintai eval run --model model-bookstore-agent --config examples/config.json
-
-# List what's configured
-flintai eval model-evaluations list --config examples/config.json
-```
+**Complete guides and reference:**
+- [Getting started](https://docs.flintai.dev)
+- [Scan command reference](https://docs.flintai.dev/scan/scan-command)
+- [Eval command reference](https://docs.flintai.dev/eval/eval-command)
+- [Configuration](https://docs.flintai.dev/eval/eval-configuration)
+- [Environment variables](https://docs.flintai.dev/reference/env-vars)
+- [Built-in evaluations](https://docs.flintai.dev/reference/builtin-evaluations)
+- [Data privacy](https://docs.flintai.dev/reference/data-privacy)
+- [FAQ](https://docs.flintai.dev/resources/faq)
 
 ## Data privacy
 
@@ -397,53 +186,19 @@ Flint AI runs on your machine, but several features can call external LLM provid
 (located in `~/.flintai/.env`, created by `flintai init`). You can set this to a remote managed LLM (i.e. `gemini`, `openai`, `anthropic`)
 or a locally hosted LLM (i.e. `litellm` or `ollama`).
 
-The table below shows exactly what will be sent to this LLM in each command path.
-
-### `flintai scan`
-
-| Layer | Runs locally | Sends to LLM |
-|-------|-------------|-------------------------------|
-| File discovery | Yes | — |
-| Static analysis (bandit, opengrep, detect-secrets, pip-audit) | Yes | — |
-| AI reasoning | No | Source code snippets, import chains, and file contents from the scanned codebase |
-| Triage | No | All findings plus surrounding code context for severity validation |
-
-The AI reasoning and triage layers are powered by the LLM configured via `GENERATOR_MODEL`. If no LLM provider is configured, these layers are skipped and the scan produces only static analysis results.
-
-### `flintai eval`
-
-| Component | Runs locally | Sends to LLM |
-|-----------|-------------|--------------------------------------------------|
-| Prompt delivery | Yes/No | Prompts (including adversarial ones) are sent to the **target model/agent** you are evaluating  |
-| Adversarial probe generation | No | The configured LLM (`GENERATOR_MODEL`) generates attack prompts and judges responses |
-| Topic guard generation | No | The configured LLM generates out-of-scope test prompts |
-| LLM-as-judge detectors | No | Model responses are sent to the configured LLM for scoring |
-| PII detector | Yes | — |
-| Secret detector | Yes | — |
-| Toxicity classifier | Yes | — |
-| Garak detectors | Yes | — |
-
-Evaluations that use LLM-based generation or judging (adversarial probes, topic guards, LLM-as-judge detectors, quality metrics) require a configured LLM provider. Message-collection evaluations with local-only detectors (PII, secrets, toxicity) work without one.
-
-### Summary
-
-- **Always local:** file discovery, static analysis tools, PII/secret/toxicity detection, garak detectors.
-- **Requires an LLM provider:** AI-powered scan reasoning and triage, adversarial probe generation, LLM-as-judge scoring, quality metrics. These features send source code, prompts, and/or model responses to whichever provider you configure via `GENERATOR_MODEL`.
-- **Sent to the target under test:** evaluation prompts (including adversarial content) are sent directly to the model or agent endpoint you specify in your config.
-
-Configure your LLM provider in `~/.flintai/.env` or via environment variables. See [Environment variables](#environment-variables) for details.
-
-
-## Further Documentation
-See [https://flintai.dev](https://flintai.dev) for further documentation.
+[Read more](https://docs.flintai.dev/reference/data-privacy).
 
 ## Contributing
+
 See [CONTRIBUTING.md](CONTRIBUTING.md) for details.
 
 ## License
-See the LICENSE file for details.
+
+Free to use - [full license](LICENSE).
 
 ## Contact
 
 - Website: [https://flintai.dev](https://flintai.dev)
 - Email: [info@flintai.dev](mailto:info@flintai.dev)
+
+
