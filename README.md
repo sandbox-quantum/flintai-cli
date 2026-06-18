@@ -14,7 +14,7 @@ One CLI to analyze agent code and runtime behavior, any framework.
 |---|---|---|
 | **Command** | `flintai scan` | `flintai eval` |
 | **What** | AI-powered security analysis of your agent's code (whitebox testing) | Runtime behavioral evaluation with adversarial prompts (blackbox testing) |
-| **Output** | Security findings mapped to OWASP top 10 with CVSS severity scores  | Evaluation scores (0-100%) mapped to OWASP top 10  |
+| **Output** | Security findings mapped to OWASP Top 10 for LLM with CVSS severity scores  | Evaluation scores (0-100%) mapped to OWASP Top 10 for LLM  |
 
 **Why Flint AI?**
 - **AI-powered analysis** — Contextual code understanding, not just pattern matching
