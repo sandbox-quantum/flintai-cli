@@ -7,6 +7,8 @@ from typing import Callable
 
 from dataclasses_json import dataclass_json
 
+from flintai.eval.common.schema import Content, Message, Role, Session
+from flintai.eval.common.schema import PartType
 from flintai.eval.common.schema import Session
 from flintai.eval.core.models.model import Model
 

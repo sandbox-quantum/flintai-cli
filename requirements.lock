@@ -303,6 +303,8 @@ mistralai==1.5.2
     # via garak
 mpmath==1.3.0
     # via sympy
+msgpack==1.2.1
+    # via flintai-cli (pyproject.toml)
 multidict==6.7.1
     # via
     #   aiohttp
@@ -416,8 +418,10 @@ pydantic-core==2.41.5
     # via
     #   cohere
     #   pydantic
-pydantic-settings==2.14.1
-    # via datafog
+pydantic-settings==2.14.2
+    # via
+    #   datafog
+    #   flintai-cli (pyproject.toml)
 pygments==2.20.0
     # via rich
 pyopenssl==26.3.0
@@ -543,6 +547,7 @@ tomli==2.4.1
 torch==2.12.1
     # via
     #   accelerate
+    #   flintai-cli (pyproject.toml)
     #   garak
 tqdm==4.68.3
     # via

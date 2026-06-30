@@ -1,5 +1,5 @@
 """
-llm_provider.py — LLM model factory for the agent scanner.
+llm_provider.py — LLM model factory shared by agent and MCP scanners.
 
 Single entry point:
 
@@ -12,8 +12,8 @@ Single entry point:
       Runs a single-pass LLM completion using generate_content_async
       on the model returned by make_model().
 
-Configuration via AGENT_SCANNER_MODEL env var in 'provider:model' format
-(e.g., 'google:gemini-2.5-flash', 'openai:gpt-5.4', 'anthropic:claude-sonnet-4-6').
+Configuration via SCANNER_MODEL env var in 'provider:model' format
+(e.g., 'google:gemini-3.5-flash', 'openai:gpt-5.4', 'anthropic:claude-sonnet-4-6').
 
 API keys are read from standard env vars by the underlying frameworks:
 GOOGLE_API_KEY, OPENAI_API_KEY, ANTHROPIC_API_KEY.
@@ -26,10 +26,12 @@ import concurrent.futures
 import logging
 import os
 import re
-import warnings
 from typing import Any
 
-from flintai.scan.schema import ADKModel
+from . import ADKModel
+from google.adk.models.llm_request import LlmRequest
+import google.genai as genai
+from google.genai import types as genai_types
 
 logger = logging.getLogger(__name__)
 
@@ -54,7 +56,7 @@ def _safe_error(exc: Exception) -> str:
 PROVIDER_GOOGLE = "google"
 PROVIDER_LITELLM = "litellm"
 
-DEFAULT_MODEL = "gemini-2.5-flash"
+DEFAULT_MODEL = "gemini-3.5-flash"
 
 _PROVIDER_ALIASES = {"gemini": "google"}
 
@@ -71,8 +73,8 @@ def parse_model_string(model_string: str) -> tuple[str, str | None]:
 
 
 def _resolve_model_string(model_string: str | None = None) -> tuple[str, str]:
-    """Resolve provider and model from argument or AGENT_SCANNER_MODEL env var."""
-    ms = (model_string or os.getenv("AGENT_SCANNER_MODEL", "")).strip()
+    """Resolve provider and model from argument or SCANNER_MODEL env var."""
+    ms = (model_string or os.getenv("SCANNER_MODEL", "")).strip()
     if not ms:
         return PROVIDER_GOOGLE, DEFAULT_MODEL
     provider, model = parse_model_string(ms)
@@ -80,21 +82,18 @@ def _resolve_model_string(model_string: str | None = None) -> tuple[str, str]:
 
 
 def make_model(model_string: str | None = None, temperature: float = 0.0) -> ADKModel:
-    """Return an ADK-compatible LiteLlm model for any provider.
+    """Return an ADK-compatible model for any provider.
 
-    Always returns a LiteLlm object so that all callers (agentic
-    reasoner, triage) use the same generate_content_async interface.
+    For Google: returns a bare model string (e.g. "gemini-3.5-flash").
+    ADK uses its native Google AI client with GOOGLE_API_KEY.
+    For other providers: returns a LiteLlm wrapper.
     """
     provider, model = _resolve_model_string(model_string)
 
-    LiteLlm = _import_litellm()
     if provider == PROVIDER_GOOGLE:
-        with warnings.catch_warnings(record=True) as caught:
-            warnings.simplefilter("always")
-            result = LiteLlm(model=f"gemini/{model}", temperature=temperature)
-        for w in caught:
-            logger.debug("%s", w.message)
-        return result
+        return model or DEFAULT_MODEL
+
+    LiteLlm = _import_litellm()
     if provider == PROVIDER_LITELLM:
         return LiteLlm(model=model, temperature=temperature)
     return LiteLlm(model=f"{provider}/{model}", temperature=temperature)
@@ -150,12 +149,11 @@ def complete_text(
     temperature: float = 0.0,
     top_p: float = 1.0,
 ) -> str | None:
-    """Run a single-pass LLM completion via model.generate_content_async."""
-    from google.adk.models.llm_request import LlmRequest  # lazy: ADK optional
-    from google.genai import types as genai_types  # lazy: ADK optional
+    """Run a single-pass LLM completion.
 
-    model_name = getattr(model, "model", str(model))
-
+    For bare string models (Google provider): uses google.genai.Client directly.
+    For LiteLlm objects: uses model.generate_content_async via LlmRequest.
+    """
     config = genai_types.GenerateContentConfig(
         system_instruction=system_prompt,
         temperature=temperature,
@@ -168,6 +166,21 @@ def complete_text(
             parts=[genai_types.Part.from_text(text=user_message)],
         )
     ]
+
+    if isinstance(model, str):
+        try:
+            client = genai.Client()
+            response = client.models.generate_content(
+                model=model,
+                contents=contents,
+                config=config,
+            )
+            return response.text.strip() if response.text else None
+        except Exception as e:
+            logger.error("LLM call failed: %s", _safe_error(e))
+            return None
+
+    model_name = getattr(model, "model", str(model))
 
     async def _run() -> str | None:
         request = LlmRequest(
@@ -193,5 +206,10 @@ def complete_text(
     try:
         return asyncio.run(_run())
     except Exception as e:
-        logger.error("LLM call failed: %s", _safe_error(e))
+        err_type = type(e).__name__
+        safe_msg = _safe_error(e)
+        # Show a concise one-liner; full details at DEBUG level.
+        first_line = safe_msg.split("\n", 1)[0]
+        logger.error("LLM call failed (%s): %s", err_type, first_line)
+        logger.debug("LLM call failed (full): %s", safe_msg)
         return None

@@ -6,17 +6,12 @@ Mirrors the existing AI-SPM schema.py patterns.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Any, Protocol, TypedDict, runtime_checkable
+from typing import Any, Protocol, TypedDict
+
+from flintai.schema import AffectedComponent  # noqa: F401
+from flintai.schema import Evidence  # noqa: F401
 
 # ── Protocols ────────────────────────────────────────────────────────────────
-
-
-@runtime_checkable
-class ADKModel(Protocol):
-    """Anything ADK accepts as a model argument (str or LiteLlm wrapper)."""
-
-    def __str__(self) -> str:
-        ...
 
 
 class InventoryLike(Protocol):
@@ -170,27 +165,6 @@ class CrewProfile:
     process: str | None = None  # e.g. "sequential", "hierarchical"
     memory: bool | None = None
     raw_code: str = ""
-
-
-@dataclass
-class AffectedComponent:
-    """A specific package, file, or module affected by a finding."""
-
-    name: str
-    version: str = ""
-    path: str = ""
-
-
-@dataclass
-class Evidence:
-    """Structured evidence supporting a finding."""
-
-    file: str
-    code_snippet: str = ""
-    context: str = ""
-    confidence: str = ""  # High | Medium | Low
-    line: int = 0
-    column: int = 0
 
 
 @dataclass

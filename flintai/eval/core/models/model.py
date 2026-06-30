@@ -3,6 +3,7 @@ from abc import ABC, abstractmethod
 from enum import Enum
 from typing import Any
 
+from flintai.eval.common.schema import PartType
 from flintai.eval.common.schema import Content, Message, Role
 
 logger = logging.getLogger(__name__)
@@ -109,3 +110,37 @@ class Model(ABC):
         **kwargs: Any,
     ) -> ModelResponse:
         pass
+
+
+# -- Helper functions -----------------------------------------------
+
+
+def extract_text_from_message(message: Message) -> str:
+    return "".join(
+        part.text for part in message.content.parts
+        if part.text is not None
+    )
+
+
+def extract_final_text(message: Message) -> str:
+    """Extract only the final text output, excluding
+    thinking, tool calls, and tool results."""
+    text_parts = [
+        part.text for part in message.content.parts
+        if part.text is not None
+        and part.part_type == PartType.TEXT
+    ]
+    if text_parts:
+        return "".join(text_parts)
+    return extract_text(message)
+
+
+def extract_text_from_conversation(
+    messages: list[Message],
+) -> str:
+    lines: list[str] = []
+    for msg in messages:
+        role = msg.content.role.value.upper()
+        text = extract_final_text(msg)
+        lines.append(f"{role}: {text}")
+    return "\n\n".join(lines)

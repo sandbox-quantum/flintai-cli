@@ -34,6 +34,21 @@ def create_detector(
             kwargs["prompt"] = db_detector.prompt
         return ModelDetector(model=model, **kwargs)
 
+    elif db_detector.type == DetectorType.ADVERSARIAL_MODEL:
+        from flintai.eval.core.detectors.detector_model_adversarial import (
+            AdversarialModelDetector,
+        )
+        from flintai.eval.core.models.generator_model import (
+            get_generator_model,
+        )
+
+        model = get_generator_model()
+        kwargs = {}
+        kwargs["include_conversation"] = db_detector.include_conversation
+        if db_detector.prompt is not None:
+            kwargs["prompt"] = db_detector.prompt
+        return AdversarialModelDetector(model=model, **kwargs)
+
     elif db_detector.type == DetectorType.PII:
         from flintai.eval.core.detectors.detector_pii import (
             PIIDetector,
