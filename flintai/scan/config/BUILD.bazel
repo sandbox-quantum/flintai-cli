@@ -1,7 +1,0 @@
-exports_files(
-    glob(["*"]),
-    visibility = [
-        "//services/aispm:__subpackages__",
-        "//services/platform/storage/db:__pkg__",
-    ],
-)
