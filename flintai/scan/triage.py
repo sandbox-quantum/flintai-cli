@@ -34,13 +34,12 @@ Usage (called from agent_scanner.py after AI reasoning step):
 import json
 import logging
 import os
+import re
 from typing import Any
 
-from flintai.scan.llm_provider import (
-    complete_text,
-    make_model,
-)
-from flintai.scan.schema import ADKModel, RawFinding
+from flintai.scan.schema import RawFinding
+from flintai.scan import ADKModel
+from flintai.scan.llm_provider import complete_text, make_model
 
 logger = logging.getLogger(__name__)
 
@@ -63,6 +62,23 @@ _SEVERITY_SCORE_CAP: dict[str, float] = {
     "Low": 3.9,
     "Info": 0.0,
 }
+
+# Severity levels and ranking for enforcement
+_SEV_LEVELS = ["Critical", "High", "Medium", "Low"]
+_SEV_RANK = {s: i for i, s in enumerate(_SEV_LEVELS)}
+
+# Patterns that prove a flaw directly — if matched, block downgrades.
+_ANCHOR_PATTERNS = [
+    re.compile(r"\beval\s*\("),
+    re.compile(r"\bexec\s*\("),
+    re.compile(r"shell\s*=\s*True"),
+    re.compile(r"pickle\.load"),
+    re.compile(r"yaml\.load\s*\("),
+    re.compile(
+        r"(?:password|api_key|secret|token)\s*=\s*['\"][^'\"]{8,}['\"]",
+        re.IGNORECASE,
+    ),
+]
 
 # Path to the prompt file
 _PROMPT_PATH = os.path.join(os.path.dirname(__file__), "config", "triage_prompt.txt")
@@ -93,6 +109,89 @@ def _cap_cvss_score(finding: dict[str, Any], severity: str) -> None:
             severity,
         )
         scores["base_score"] = cap
+
+
+# ── Post-triage severity enforcement ──────────────────────────────────────────
+
+
+def _has_anchor_evidence(finding: dict[str, Any]) -> bool:
+    """Return True if evidence matches a Direct Code Evidence Anchor pattern."""
+    for ev in finding.get("evidence", []):
+        snippet = ev.get("code_snippet", "") if isinstance(ev, dict) else ""
+        if not snippet:
+            continue
+        for pat in _ANCHOR_PATTERNS:
+            if pat.search(snippet):
+                return True
+    return False
+
+
+def _enforce_severity(
+    kept_findings: list[dict[str, Any]],
+    original_findings: list[dict[str, Any]],
+) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
+    """Deterministic post-LLM severity enforcement.
+
+    Rules:
+    1. ANCHOR — if evidence matches a code pattern, block downgrades.
+    2. NO UPGRADE — severity may never exceed cvss_v4_severity.
+    3. MAX ONE-STEP — severity may drop at most one level from CVSS.
+    """
+    originals_by_id = {f.get("id"): f for f in original_findings}
+    enforced: list[dict[str, Any]] = []
+
+    for f in kept_findings:
+        fid = f.get("id")
+        original = originals_by_id.get(fid, {})
+        cvss_sev = original.get("cvss_v4_severity", "").capitalize()
+
+        if cvss_sev not in _SEV_RANK:
+            continue
+
+        llm_sev = f.get("ai_spm_severity", "").capitalize()
+        if llm_sev not in _SEV_RANK:
+            llm_sev = cvss_sev
+
+        cvss_rank = _SEV_RANK[cvss_sev]
+        llm_rank = _SEV_RANK[llm_sev]
+
+        if _has_anchor_evidence(original) and llm_rank > cvss_rank:
+            enforced.append(
+                {
+                    "id": fid,
+                    "rule": "anchor",
+                    "llm_severity": llm_sev,
+                    "enforced_severity": cvss_sev,
+                }
+            )
+            f["ai_spm_severity"] = cvss_sev
+            continue
+
+        if llm_rank < cvss_rank:
+            enforced.append(
+                {
+                    "id": fid,
+                    "rule": "no_upgrade",
+                    "llm_severity": llm_sev,
+                    "enforced_severity": cvss_sev,
+                }
+            )
+            f["ai_spm_severity"] = cvss_sev
+            continue
+
+        if llm_rank > cvss_rank + 1:
+            one_step = _SEV_LEVELS[cvss_rank + 1]
+            enforced.append(
+                {
+                    "id": fid,
+                    "rule": "max_one_step",
+                    "llm_severity": llm_sev,
+                    "enforced_severity": one_step,
+                }
+            )
+            f["ai_spm_severity"] = one_step
+
+    return kept_findings, enforced
 
 
 # ── Prompt loader ──────────────────────────────────────────────────────────────
@@ -390,6 +489,25 @@ def run_triage(
             _cap_cvss_score(reconstructed, new_sev)
         kept_findings.append(reconstructed)
     result["kept_findings"] = kept_findings
+
+    # ── Severity enforcement ──────────────────────────────────────────────────
+    result["kept_findings"], severity_overrides = _enforce_severity(
+        result["kept_findings"],
+        triage_input,
+    )
+    if severity_overrides:
+        logger.info(
+            "Severity enforcement: %d finding(s) clamped to CVSS baseline",
+            len(severity_overrides),
+        )
+        for ov in severity_overrides:
+            logger.info(
+                "  %s: %s -> %s (rule: %s)",
+                ov["id"],
+                ov["llm_severity"],
+                ov["enforced_severity"],
+                ov["rule"],
+            )
 
     # ── Integrity check ────────────────────────────────────────────────────────
     input_ids = {f.get("id") for f in triage_input}

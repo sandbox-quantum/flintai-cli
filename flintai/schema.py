@@ -33,6 +33,27 @@ class DiscoveryResult:
     source_backend: str = "unknown"
 
 
+@dataclass
+class AffectedComponent:
+    """A specific package, file, or module affected by a vulnerability."""
+
+    name: str
+    version: str = ""
+    path: str = ""
+
+
+@dataclass
+class Evidence:
+    """Structured evidence supporting a vulnerability finding."""
+
+    file: str
+    code_snippet: str = ""
+    context: str = ""
+    confidence: str = ""  # HIGH | MEDIUM | LOW
+    line: int = 0
+    column: int = 0
+
+
 class DependencyType(Enum):
     LIBRARY_USAGE = "LIBRARY_USAGE"
     MODEL_USAGE = "MODEL_USAGE"

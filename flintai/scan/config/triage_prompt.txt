@@ -76,55 +76,46 @@ For every finding in raw_findings, make exactly one of three decisions:
 ────────────────────────────────────────────
 3. SEVERITY CALIBRATION RULES
 ────────────────────────────────────────────
-Apply these rules when deciding whether to DOWNGRADE a finding's severity.
+
+DEFAULT RULE: Keep the severity as assigned by the scanner. Do NOT
+downgrade unless one of the numbered conditions below is met.
 You may NEVER upgrade a severity — only downgrade or keep it.
 
-  CRITICAL → HIGH if:
-    - There is no direct evidence of an active exploitation path in the provided
-      code or configuration (the risk is theoretical, not demonstrated).
-    - The finding is from ai_reasoning source with evidence confidence=Medium or Low.
-    - The vulnerability requires an attacker to already have significant access
-      or the attack chain is multi-step with several preconditions.
+ANCHOR RULE (overrides all downgrades):
+  IF the evidence field contains any of these patterns, the severity
+  MUST NOT be downgraded regardless of any other condition:
+    - eval() or exec() on a variable
+    - subprocess with shell=True
+    - os.system()
+    - pickle.loads() or pickle.load()
+    - yaml.load() without SafeLoader
+    - A literal hardcoded API key, password, or token
+    - SQL string concatenation with a variable
+  These are direct proof of the flaw. Do not downgrade them.
 
-  HIGH → MEDIUM if:
-    - The finding relies on a specific attacker-controlled precondition that
-      is not evidenced in the code.
-    - The affected component is internal-only with no exposed interface.
-    - The finding is from ai_reasoning source with hallucination_flag=true.
+CRITICAL to HIGH — downgrade ONLY if ALL of these are true:
+  C1. The evidence field contains NO code snippet (empty or missing).
+  C2. The source is ai_reasoning (not a static tool).
+  C3. The confidence is "Medium" or "Low" (not "High").
+  IF C1 AND C2 AND C3, then downgrade to HIGH. Otherwise keep CRITICAL.
 
-  Note on hallucination_flag: hallucination_flag=false means the AI reasoning
-  agent was confident in the finding — it is NOT a reason to downgrade.
-  Only hallucination_flag=true justifies a downgrade via this signal.
+HIGH to MEDIUM — downgrade ONLY if ALL of these are true:
+  H1. The source is ai_reasoning.
+  H2. The hallucination_flag is true.
+  IF H1 AND H2, then downgrade to MEDIUM. Otherwise keep HIGH.
 
-  MEDIUM → LOW if:
-    - The finding is informational in nature with no concrete exploitation path.
-    - The finding is from a static tool but the code pattern is a false positive
-      given the surrounding context you can observe in the evidence.
+MEDIUM to LOW — downgrade ONLY if:
+  M1. The finding is a Bandit advisory import warning (B4xx) with no
+      evidence of actual misuse in the code snippet.
+  IF M1, then downgrade to LOW. Otherwise keep MEDIUM.
 
-  When the severity label from the scanner already reflects the calibrated level,
-  keep it — do not downgrade for the sake of it.
-
-  RESERVE CRITICAL for:
-    Findings with a clear, direct, realistic exploitation path evidenced in the
-    code, where no significant attacker preconditions are required, and the
-    impact is immediate data loss, remote code execution, or full credential exposure.
-
-  DIRECT CODE EVIDENCE ANCHOR — this rule overrides all others above:
-    If the finding's evidence field contains a code snippet that directly and
-    unambiguously proves the flaw (e.g. eval() on a variable, shell=True with
-    unsanitised input, a literal hardcoded credential), do NOT downgrade solely
-    because the static tool assigned confidence=medium. Static tool confidence
-    reflects detection certainty, not exploitability. When the code itself is
-    the proof, the severity is anchored.
-
-    Examples that must stay CRITICAL:
-      - eval(script_content)     — direct RCE, no preconditions
-      - subprocess.run(shell=True) with an unsanitised variable
-      - A literal hardcoded API key or password visible in the evidence
-
-    Examples where confidence=medium justifies downgrading:
-      - import subprocess        — advisory import warning, no misuse shown
-      - A Bandit informational check with no concrete evidence of misuse
+DO NOT downgrade based on:
+  - "the risk is theoretical" — if the code pattern exists, it is real
+  - "no exploitation in the wild" — we assess code, not threat intel
+  - "the attacker needs access" — all code-level flaws assume code access
+  - "the component is internal" — internal components get compromised too
+  - "confidence is medium" on a static tool — static tools detect patterns,
+    not exploitability; medium confidence is normal for pattern matchers
 
 ────────────────────────────────────────────
 4. WORKED EXAMPLES

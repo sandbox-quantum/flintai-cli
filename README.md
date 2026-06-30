@@ -1,8 +1,12 @@
 <div align="center">
 
-<img src="images/flint-ai-wordmark.svg" alt="Flint AI" width="350">
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/sandbox-quantum/flintai-cli/main/images/flint-ai-wordmark-dark.svg">
+  <source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/sandbox-quantum/flintai-cli/main/images/flint-ai-wordmark.svg">
+  <img src="https://raw.githubusercontent.com/sandbox-quantum/flintai-cli/main/images/flint-ai-wordmark.svg" alt="Flint AI" width="350">
+</picture>
 
-[![PyPI version](https://img.shields.io/pypi/v/flintai-cli?color=A1C9D2&logo=pypi&logoColor=white)](https://pypi.org/project/flintai-cli/) [![Python](https://img.shields.io/badge/python-3.13+-A1C9D2?logo=python&logoColor=white)](https://www.python.org/downloads/) [![License](https://img.shields.io/github/license/sandbox-quantum/flintai-cli?color=1B1817&labelColor=555&logoColor=white)](https://github.com/sandbox-quantum/flintai-cli/blob/main/LICENSE) [![Documentation](https://img.shields.io/badge/docs-docs.flintai.dev-FF895E)](https://docs.flintai.dev) [![Website](https://img.shields.io/badge/website-flintai.dev-FF895E)](https://flintai.dev)
+[![PyPI version](https://img.shields.io/pypi/v/flintai-cli?color=A1C9D2&logo=pypi&logoColor=white)](https://pypi.org/project/flintai-cli/) [![Python](https://img.shields.io/badge/python-3.13+-A1C9D2?logo=python&logoColor=white)](https://www.python.org/downloads/) [![Documentation](https://img.shields.io/badge/docs-docs.flintai.dev-FF895E)](https://docs.flintai.dev) [![Website](https://img.shields.io/badge/website-flintai.dev-FF895E)](https://flintai.dev)
 
 </div>
 
@@ -14,7 +18,7 @@ One CLI to analyze agent code and runtime behavior, any framework.
 |---|---|---|
 | **Command** | `flintai scan` | `flintai eval` |
 | **What** | AI-powered security analysis of your agent's code (whitebox testing) | Runtime behavioral evaluation with adversarial prompts (blackbox testing) |
-| **Output** | Security findings mapped to OWASP Top 10 for LLM with CVSS severity scores  | Evaluation scores (0-100%) mapped to OWASP Top 10 for LLM  |
+| **Output** | Security findings mapped to OWASP top 10 with CVSS severity scores  | Evaluation scores (0-100%) mapped to OWASP top 10  |
 
 **Why Flint AI?**
 - **AI-powered analysis** — Contextual code understanding, not just pattern matching
@@ -33,6 +37,13 @@ One CLI to analyze agent code and runtime behavior, any framework.
 
 ### Step 1: Install Flint AI
 
+Using a virtual environment is recommended to avoid dependency conflicts:
+```bash
+python3.13 -m venv .venv
+source .venv/bin/activate
+```
+
+Install Flint AI CLI:
 ```bash
 pip install flintai-cli
 ```
@@ -79,7 +90,7 @@ The included `examples/config.json` has both agents configured with builtin eval
 flintai scan examples/bookstore_agent/
 ```
 
-<img src="images/scan-findings.png" alt="Scan results showing security findings" width="550">
+<img src="https://raw.githubusercontent.com/sandbox-quantum/flintai-cli/main/images/scan-findings.png" alt="Scan results showing security findings" width="550">
 
 *Example: Scan found 2 security issues - High severity missing authentication and Medium severity unbounded execution loop*
 
@@ -106,7 +117,7 @@ See our documentation to configure, scan and evaluate your agents:
   - [Understand scan results](https://docs.flintai.dev/scan/scan-results) — Interpret findings and severity scores
 - `flintai eval`
   - [Evaluate your own agent](https://docs.flintai.dev/eval/getting-started) — Configure and test your agent's behavior
-  - [Configuration](https://docs.flintai.dev/eval/getting-started) — In-depth documentation of our configuration
+  - [Configuration](https://docs.flintai.dev/eval/eval-configuration) — In-depth documentation of our configuration
   - [Understand eval results](https://docs.flintai.dev/eval/eval-results) — What the scores means and how to improve
 
 **Ship with confidence.** Validate behavior, catch risks, prove readiness.
@@ -172,8 +183,7 @@ The `flintai eval` command requires configuration. See [Configuration](https://d
 
 **Complete guides and reference:**
 - [Getting started](https://docs.flintai.dev)
-- [Scan command reference](https://docs.flintai.dev/scan/scan-command)
-- [Eval command reference](https://docs.flintai.dev/eval/eval-command)
+- [Command reference](https://docs.flintai.dev/reference/commands)
 - [Configuration](https://docs.flintai.dev/eval/eval-configuration)
 - [Environment variables](https://docs.flintai.dev/reference/env-vars)
 - [Built-in evaluations](https://docs.flintai.dev/reference/builtin-evaluations)

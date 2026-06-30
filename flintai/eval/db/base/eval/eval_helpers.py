@@ -184,13 +184,13 @@ def create_evaluation(
                 "detector_id must be set on "
                 "the DbEvaluation for adversarial probes"
             )
-        db_detector = detector_repo.get(
+        detector = detector_repo.get_detector(
             db_evaluation.detector_id,
         )
         return AdversarialEvaluation(
             goals=goals,
             attack_techniques=db_evaluation.attack_techniques,
-            detector_prompt=db_detector.prompt,
+            detector=detector,
             num_prompts=db_evaluation.num_prompts or 5,
             max_turns=db_evaluation.max_turns or 5,
             attacker_model=get_generator_model(),

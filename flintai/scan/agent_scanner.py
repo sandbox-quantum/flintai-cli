@@ -25,10 +25,6 @@ from flintai.scan.constants import (
     VALID_SEVERITIES,
 )
 from flintai.schema import RepoFile
-from flintai.scan.llm_provider import (
-    get_model_name,
-    make_model,
-)
 from flintai.scan.reasoner import run_agentic_reasoning
 from flintai.scan.schema import (
     AffectedComponent,
@@ -62,6 +58,7 @@ from flintai.scan.triage import (
     build_agent_context as build_triage_context,
 )
 from flintai.scan.triage import run_triage
+from flintai.scan.llm_provider import get_model_name, make_model
 
 logger = logging.getLogger(__name__)
 
@@ -562,7 +559,7 @@ def run_core(
     llm_model = None
     try:
         if model_string:
-            os.environ["AGENT_SCANNER_MODEL"] = model_string
+            os.environ["SCANNER_MODEL"] = model_string
         llm_model = make_model()
         logger.info("LLM model: %s", llm_model)
     except Exception as e:
@@ -572,25 +569,33 @@ def run_core(
     agentic_trace: dict[str, str] = {}
 
     if llm_model is not None:
-        if agentic:
-            logger.info("Mode: AGENTIC v2 (Google ADK reasoning loop)")
-            ai_raw, ai_summary, agentic_trace = run_agentic_reasoning(
-                agents,
-                python_files,
-                static_findings=static_raw,
+        try:
+            if agentic:
+                logger.info("Mode: AGENTIC v2 (Google ADK reasoning loop)")
+                ai_raw, ai_summary, agentic_trace = run_agentic_reasoning(
+                    agents,
+                    python_files,
+                    static_findings=static_raw,
+                )
+                logger.info(
+                    "ADK session: %s | exit: %s | model: %s",
+                    agentic_trace.get("session_id", "?"),
+                    agentic_trace.get("exit_reason", "?"),
+                    agentic_trace.get("adk_model", "?"),
+                )
+            else:
+                ai_raw = []
+                ai_summary = "Agentic reasoning disabled."
+            ai_findings = convert_ai_findings(ai_raw)
+            all_findings.extend(ai_findings)
+            logger.info("AI findings converted: %d", len(ai_findings))
+        except Exception as e:
+            logger.warning(
+                "AI reasoning failed (%s): %s — continuing with static findings only",
+                type(e).__name__,
+                e,
             )
-            logger.info(
-                "ADK session: %s | exit: %s | model: %s",
-                agentic_trace.get("session_id", "?"),
-                agentic_trace.get("exit_reason", "?"),
-                agentic_trace.get("adk_model", "?"),
-            )
-        else:
-            ai_raw = []
-            ai_summary = "Agentic reasoning disabled."
-        ai_findings = convert_ai_findings(ai_raw)
-        all_findings.extend(ai_findings)
-        logger.info("AI findings converted: %d", len(ai_findings))
+            ai_summary = f"AI reasoning failed: {e}"
     else:
         logger.info("No LLM provider — skipping AI reasoning layer")
 

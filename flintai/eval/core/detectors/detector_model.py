@@ -28,9 +28,11 @@ class ModelDetector(Detector):
         self,
         model: Model,
         prompt: str = _DEFAULT_PROMPT,
+        include_conversation: bool = False,
     ) -> None:
         self._model = model
         self._prompt = prompt
+        self._include_conversation = include_conversation
 
     async def detect(self, response: ModelResponse) -> DetectorResult:
         response_text = _extract_text(response)

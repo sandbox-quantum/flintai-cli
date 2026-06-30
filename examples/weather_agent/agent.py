@@ -9,8 +9,13 @@ A simple weather assistant that:
 Based on the ADK Weather Agent Team tutorial:
 https://adk.dev/tutorials/agent-team/
 
-Start with:
-    adk api_server examples/
+Setup (using `uv`):
+    - Create venv: uv venv --seed
+    - Install dependency: uv add google-adk
+
+Start weather agent:
+    - export GEMINI_API_KEY=<...>
+    - uv run adk api_server --port 8008 examples/
 """
 
 from google.adk import Agent

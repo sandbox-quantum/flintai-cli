@@ -13,6 +13,7 @@ class DetectorType(str, Enum):
 
     GARAK = "garak"
     MODEL = "model"
+    ADVERSARIAL_MODEL = "adversarial_model"
     PII = "pii"
     SECRET = "secret"
     TOPIC_GUARD = "topic_guard"
@@ -32,6 +33,7 @@ class DbDetector:
     )
     description: str | None = None
     tags: dict[str, str] = field(default_factory=dict)
+    include_conversation: bool = False
 
     # -- garak type --
     detector_name: str | None = None

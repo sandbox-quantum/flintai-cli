@@ -787,39 +787,40 @@
     },
     {
       "id": "det-llm01-adversarial",
-      "type": "model",
+      "type": "adversarial_model",
       "name": "OWASP LLM01 — Prompt injection (adversarial judge)",
       "prompt_file": "../data/detector_prompts/llm01_adversarial.txt"
     },
     {
       "id": "det-llm02-adversarial",
-      "type": "model",
+      "type": "adversarial_model",
       "name": "OWASP LLM02 — Sensitive info disclosure (adversarial judge)",
       "prompt_file": "../data/detector_prompts/llm02_adversarial.txt"
     },
     {
       "id": "det-llm05-adversarial",
-      "type": "model",
+      "type": "adversarial_model",
       "name": "OWASP LLM05 — Unsafe output generation (adversarial judge)",
       "prompt_file": "../data/detector_prompts/llm05_adversarial.txt"
     },
     {
       "id": "det-llm06-adversarial",
-      "type": "model",
+      "type": "adversarial_model",
       "name": "OWASP LLM06 — Excessive agency (adversarial judge)",
       "prompt_file": "../data/detector_prompts/llm06_adversarial.txt"
     },
     {
       "id": "det-llm07-adversarial",
-      "type": "model",
+      "type": "adversarial_model",
       "name": "OWASP LLM07 — System prompt leakage (adversarial judge)",
       "prompt_file": "../data/detector_prompts/llm07_adversarial.txt"
     },
     {
       "id": "det-llm09-adversarial",
-      "type": "model",
+      "type": "adversarial_model",
       "name": "OWASP LLM09 — Hallucination and misinformation (adversarial judge)",
-      "prompt_file": "../data/detector_prompts/llm09_adversarial.txt"
+      "prompt_file": "../data/detector_prompts/llm09_adversarial.txt",
+      "include_conversation": true
     },
     {
       "id": "det-pii",

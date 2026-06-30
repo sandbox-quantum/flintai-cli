@@ -5,6 +5,7 @@
     "description": "Attacker manipulates agent objectives or decision path via malicious input content",
     "subcategories": {
       "direct_prompt_injection": {
+        "rule_id": "ER-v1-direct_prompt_injection",
         "title": "Direct Prompt Injection",
         "description": "User-controlled input flows unsanitized into agent system prompt or LLM call",
         "cvss_vector": "CVSS:4.0/AV:N/AC:L/AT:N/PR:N/UI:N/VC:H/VI:H/VA:L/SC:H/SI:H/SA:L",
@@ -13,6 +14,7 @@
         "remediation": "Separate user input from system instructions using distinct message roles. Validate and sanitize all external input before passing to the LLM."
       },
       "indirect_prompt_injection": {
+        "rule_id": "ER-v1-indirect_prompt_injection_via_tool_output",
         "title": "Indirect Prompt Injection via Tool Output",
         "description": "Agent processes external tool output or retrieved data containing injected instructions",
         "cvss_vector": "CVSS:4.0/AV:N/AC:H/AT:N/PR:N/UI:N/VC:H/VI:H/VA:L/SC:H/SI:H/SA:L",
@@ -26,6 +28,7 @@
         "remediation": "Treat all tool outputs and retrieved content as untrusted data. Filter tool results for injected instructions before feeding back to the agent context."
       },
       "goal_manipulation_via_rag": {
+        "rule_id": "ER-v1-goal_manipulation_via_rag_or_retrieved_content",
         "title": "Goal Manipulation via RAG or Retrieved Content",
         "description": "Agent retrieves poisoned documents or vector store entries that redirect its objectives",
         "cvss_vector": "CVSS:4.0/AV:N/AC:H/AT:N/PR:L/UI:N/VC:H/VI:H/VA:L/SC:H/SI:H/SA:L",
@@ -45,8 +48,9 @@
     "description": "Agent uses legitimate tools in unsafe ways due to over-privilege, bad input, or poisoned descriptors",
     "subcategories": {
       "excessive_tool_permissions": {
+        "rule_id": "ER-v1-excessive_tool_permissions",
         "title": "Excessive Tool Permissions",
-        "description": "Agent granted tools far beyond what its stated goal requires \u2014 violates least-agency principle",
+        "description": "Agent granted tools far beyond what its stated goal requires — violates least-agency principle",
         "cvss_vector": "CVSS:4.0/AV:N/AC:L/AT:N/PR:L/UI:N/VC:H/VI:H/VA:L/SC:N/SI:N/SA:N",
         "severity": "high",
         "detection_hints": [
@@ -57,6 +61,7 @@
         "remediation": "Apply least-privilege principle: grant only tools the agent's stated purpose requires. Classify tools by risk level and restrict high-impact tools (send, delete, execute) to trusted contexts."
       },
       "unvalidated_tool_input": {
+        "rule_id": "ER-v1-unvalidated_tool_input_parameters",
         "title": "Unvalidated Tool Input Parameters",
         "description": "Tool parameters flow from LLM output to function calls without type, range, or semantic validation",
         "cvss_vector": "CVSS:4.0/AV:N/AC:L/AT:N/PR:L/UI:N/VC:L/VI:H/VA:L/SC:N/SI:N/SA:N",
@@ -69,6 +74,7 @@
         "remediation": "Validate all tool input parameters for type, range, and format before execution. Use allowlists for permitted values. Block chained command patterns."
       },
       "poisoned_tool_descriptor": {
+        "rule_id": "ER-v1-poisoned_or_tampered_tool_descriptor",
         "title": "Poisoned or Tampered Tool Descriptor",
         "description": "Tool definition or MCP server descriptor has been modified to redirect agent actions",
         "cvss_vector": "CVSS:4.0/AV:N/AC:H/AT:N/PR:L/UI:N/VC:H/VI:H/VA:L/SC:H/SI:H/SA:N",
@@ -81,6 +87,7 @@
         "remediation": "Verify tool definitions against a trusted registry. Pin tool versions and validate checksums. Monitor for changes to tool schemas at runtime."
       },
       "path_traversal": {
+        "rule_id": "ER-v1-path_traversal_in_file_tools",
         "title": "Path Traversal in File Tools",
         "description": "File read/write tools accept paths without sanitization, enabling directory traversal",
         "cvss_vector": "CVSS:4.0/AV:N/AC:L/AT:N/PR:L/UI:N/VC:H/VI:L/VA:L/SC:N/SI:N/SA:N",
@@ -100,6 +107,7 @@
     "description": "Agents inherit, reuse, or escalate identities and credentials beyond their functional scope",
     "subcategories": {
       "hardcoded_credentials": {
+        "rule_id": "ER-v1-hardcoded_api_keys_or_credentials",
         "title": "Hardcoded API Keys or Credentials",
         "description": "API keys, tokens, or passwords hardcoded in agent source or config files",
         "cvss_vector": "CVSS:4.0/AV:N/AC:L/AT:N/PR:N/UI:N/VC:H/VI:L/VA:N/SC:H/SI:L/SA:N",
@@ -113,6 +121,7 @@
         "remediation": "Load credentials from environment variables or a secrets manager (e.g., AWS Secrets Manager, HashiCorp Vault). Never store API keys, tokens, or passwords in source code."
       },
       "missing_auth_on_endpoint": {
+        "rule_id": "ER-v1-missing_authentication_on_agent_endpoint",
         "title": "Missing Authentication on Agent Endpoint",
         "description": "Agent server or API endpoint exposed without authentication or TLS",
         "cvss_vector": "CVSS:4.0/AV:N/AC:L/AT:N/PR:N/UI:N/VC:H/VI:H/VA:L/SC:N/SI:N/SA:N",
@@ -126,6 +135,7 @@
         "remediation": "Enable TLS on all agent endpoints. Implement authentication (OAuth 2.0, API key verification) and restrict binding to specific network interfaces."
       },
       "over_privileged_agent": {
+        "rule_id": "ER-v1-over_privileged_agent_role_or_identity",
         "title": "Over-Privileged Agent Role or Identity",
         "description": "Agent role, backstory, or system prompt grants capabilities beyond its functional need",
         "cvss_vector": "CVSS:4.0/AV:N/AC:L/AT:N/PR:L/UI:N/VC:H/VI:H/VA:L/SC:N/SI:N/SA:N",
@@ -138,6 +148,7 @@
         "remediation": "Restrict the agent's system prompt and role to only necessary capabilities. Remove broad permissions ('full access', 'admin') from agent instructions."
       },
       "confused_deputy": {
+        "rule_id": "ER-v1-agent_confused_deputy_attack",
         "title": "Confused Deputy Attack",
         "description": "Agent manipulated into using its legitimate credentials to act on behalf of an attacker",
         "cvss_vector": "CVSS:4.0/AV:N/AC:H/AT:N/PR:N/UI:N/VC:H/VI:H/VA:N/SC:H/SI:H/SA:N",
@@ -150,6 +161,7 @@
         "remediation": "Validate the identity and authorization of all callers before executing actions on their behalf. Use scoped credentials that cannot be reused across contexts."
       },
       "inherited_session_abuse": {
+        "rule_id": "ER-v1-inherited_session_or_token_abuse",
         "title": "Inherited Session or Token Abuse",
         "description": "Agent inherits user session, OAuth token, or SSH key with scope broader than needed",
         "cvss_vector": "CVSS:4.0/AV:N/AC:H/AT:N/PR:L/UI:N/VC:H/VI:H/VA:L/SC:H/SI:H/SA:N",
@@ -166,9 +178,10 @@
   "asi04_supply_chain": {
     "asi_code": "ASI04",
     "asi_title": "Agentic Supply Chain Vulnerabilities",
-    "description": "Compromised runtime components \u2014 tools, plugins, MCP servers, deps \u2014 alter agent behavior",
+    "description": "Compromised runtime components — tools, plugins, MCP servers, deps — alter agent behavior",
     "subcategories": {
       "unpinned_dependencies": {
+        "rule_id": "ER-v1-unpinned_or_overly_broad_dependency_versions",
         "title": "Unpinned or Overly Broad Dependency Versions",
         "description": "requirements.txt uses unpinned or wildcard versions enabling supply chain substitution",
         "cvss_vector": "CVSS:4.0/AV:N/AC:H/AT:N/PR:N/UI:N/VC:H/VI:H/VA:L/SC:H/SI:H/SA:N",
@@ -181,6 +194,7 @@
         "remediation": "Pin all dependency versions with == in requirements files. Use a lock file to ensure reproducible builds. Run dependency scanning in CI."
       },
       "known_vulnerable_dependency": {
+        "rule_id": "ER-v1-known_vulnerable_dependency_cve",
         "title": "Known Vulnerable Dependency (CVE)",
         "description": "A package in the dependency tree has a known CVE in the OSV/NVD database",
         "cvss_vector": "CVSS:4.0/AV:N/AC:L/AT:N/PR:N/UI:N/VC:H/VI:H/VA:H/SC:N/SI:N/SA:N",
@@ -189,6 +203,7 @@
         "remediation": "Upgrade the affected package to the fixed version. If no fix exists, evaluate alternatives or apply compensating controls."
       },
       "untrusted_external_tool": {
+        "rule_id": "ER-v1-untrusted_or_unverified_external_tool_plugin",
         "title": "Untrusted or Unverified External Tool/Plugin",
         "description": "Agent dynamically loads tools, MCP servers, or plugins without signature or registry verification",
         "cvss_vector": "CVSS:4.0/AV:N/AC:H/AT:N/PR:L/UI:N/VC:H/VI:H/VA:L/SC:H/SI:H/SA:N",
@@ -208,6 +223,7 @@
     "description": "Agent generates or runs code, commands, or scripts without safe sandboxing or review",
     "subcategories": {
       "arbitrary_code_execution": {
+        "rule_id": "ER-v1-arbitrary_code_execution_via_tool_or_eval",
         "title": "Arbitrary Code Execution via Tool or eval()",
         "description": "Agent executes shell commands or eval() with parameters derived from LLM output or user input",
         "cvss_vector": "CVSS:4.0/AV:N/AC:L/AT:N/PR:L/UI:N/VC:H/VI:H/VA:H/SC:H/SI:H/SA:H",
@@ -222,6 +238,7 @@
         "remediation": "Replace eval()/exec() with safe alternatives (ast.literal_eval(), operator-based parsers). Use subprocess with argument lists, never shell=True. Sandbox code execution in containers."
       },
       "unsafe_code_generation": {
+        "rule_id": "ER-v1-generated_code_executed_without_review",
         "title": "Generated Code Executed Without Review",
         "description": "Agent-generated code or patches applied directly without human preview or sandboxed testing",
         "cvss_vector": "CVSS:4.0/AV:N/AC:H/AT:N/PR:L/UI:N/VC:H/VI:H/VA:L/SC:H/SI:H/SA:N",
@@ -234,6 +251,7 @@
         "remediation": "Review all agent-generated code before execution. Run generated code in a sandboxed environment with restricted filesystem and network access."
       },
       "unsafe_deserialization": {
+        "rule_id": "ER-v1-unsafe_deserialization_of_agent_state",
         "title": "Unsafe Deserialization of Agent State",
         "description": "Agent deserializes untrusted data (pickle, YAML load, JSON with class hooks) enabling code execution",
         "cvss_vector": "CVSS:4.0/AV:N/AC:H/AT:N/PR:L/UI:N/VC:H/VI:H/VA:H/SC:N/SI:N/SA:N",
@@ -249,6 +267,7 @@
     "description": "Persistent memory, RAG stores, or context summaries poisoned to alter future agent behavior",
     "subcategories": {
       "memory_poisoning": {
+        "rule_id": "ER-v1-agent_memory_poisoning",
         "title": "Agent Memory Poisoning",
         "description": "Persistent agent memory stores unsanitized content that poisons future reasoning sessions",
         "cvss_vector": "CVSS:4.0/AV:N/AC:H/AT:N/PR:L/UI:N/VC:H/VI:H/VA:L/SC:L/SI:L/SA:N",
@@ -257,6 +276,7 @@
         "remediation": "Scan all memory writes for malicious content before commit. Track provenance of memory entries. Use expiry and down-weighting for unverified memories."
       },
       "persistent_memory_no_sanitization": {
+        "rule_id": "ER-v1-persistent_memory_without_content_filtering",
         "title": "Persistent Memory Without Content Filtering",
         "description": "Agent stores conversation history or tool outputs persistently with no PII or injection filtering",
         "cvss_vector": "CVSS:4.0/AV:N/AC:L/AT:N/PR:L/UI:N/VC:H/VI:L/VA:N/SC:N/SI:N/SA:N",
@@ -269,6 +289,7 @@
         "remediation": "Filter PII, credentials, and injection patterns from content before storing in memory. Implement content classification and redaction rules."
       },
       "cross_session_contamination": {
+        "rule_id": "ER-v1-cross_session_or_cross_tenant_memory_contamination",
         "title": "Cross-Session or Cross-Tenant Memory Contamination",
         "description": "Shared memory or state between agent sessions exposes data from one user or tenant to another",
         "cvss_vector": "CVSS:4.0/AV:N/AC:H/AT:N/PR:L/UI:N/VC:H/VI:L/VA:N/SC:N/SI:N/SA:N",
@@ -281,6 +302,7 @@
         "remediation": "Use per-session or per-tenant memory with UUID-based isolation. Clear shared state between sessions. Enforce memory namespace boundaries."
       },
       "rag_poisoning": {
+        "rule_id": "ER-v1-rag_database_poisoning",
         "title": "RAG Database Poisoning",
         "description": "Attacker injects adversarial content into RAG knowledge base to manipulate agent responses",
         "cvss_vector": "CVSS:4.0/AV:N/AC:H/AT:N/PR:L/UI:N/VC:H/VI:H/VA:L/SC:H/SI:H/SA:N",
@@ -300,8 +322,9 @@
     "description": "Agent-to-agent messages lack authentication, encryption, or semantic validation",
     "subcategories": {
       "unauthenticated_agent_communication": {
+        "rule_id": "ER-v1-unauthenticated_agent_to_agent_communication",
         "title": "Unauthenticated Agent-to-Agent Communication",
-        "description": "Messages between agents carry no cryptographic identity proof \u2014 any party can spoof an agent",
+        "description": "Messages between agents carry no cryptographic identity proof — any party can spoof an agent",
         "cvss_vector": "CVSS:4.0/AV:N/AC:H/AT:N/PR:N/UI:N/VC:H/VI:H/VA:L/SC:H/SI:H/SA:N",
         "severity": "high",
         "detection_hints": [
@@ -312,8 +335,9 @@
         "remediation": "Require mutual authentication (mTLS, signed tokens) for all agent-to-agent communication. Verify sender identity before processing messages."
       },
       "unencrypted_agent_channel": {
+        "rule_id": "ER-v1-unencrypted_agent_communication_channel",
         "title": "Unencrypted Agent Communication Channel",
-        "description": "Inter-agent communication sent over plain HTTP or unencrypted channels \u2014 susceptible to interception",
+        "description": "Inter-agent communication sent over plain HTTP or unencrypted channels — susceptible to interception",
         "cvss_vector": "CVSS:4.0/AV:N/AC:H/AT:N/PR:N/UI:N/VC:H/VI:L/VA:N/SC:N/SI:N/SA:N",
         "severity": "high",
         "detection_hints": [
@@ -324,6 +348,7 @@
         "remediation": "Use TLS/HTTPS for all inter-agent communication. Never transmit agent messages over plain HTTP. Enable certificate verification."
       },
       "unvalidated_agent_message": {
+        "rule_id": "ER-v1-unvalidated_inter_agent_message_content",
         "title": "Unvalidated Inter-Agent Message Content",
         "description": "Agent blindly trusts and acts on messages from other agents without semantic or schema validation",
         "cvss_vector": "CVSS:4.0/AV:N/AC:H/AT:N/PR:L/UI:N/VC:H/VI:H/VA:L/SC:H/SI:H/SA:N",
@@ -343,16 +368,18 @@
     "description": "Errors in one agent propagate across multi-agent pipelines with compounding destructive impact",
     "subcategories": {
       "unbounded_agent_loop": {
+        "rule_id": "ER-v1-unbounded_agent_execution_loop",
         "title": "Unbounded Agent Execution Loop",
-        "description": "Agent loop has no max iteration count or timeout \u2014 enables resource exhaustion or runaway execution",
+        "description": "Agent loop has no max iteration count or timeout — enables resource exhaustion or runaway execution",
         "cvss_vector": "CVSS:4.0/AV:N/AC:L/AT:N/PR:L/UI:N/VC:N/VI:N/VA:H/SC:N/SI:N/SA:H",
         "severity": "medium",
         "detection_hints": ["max_iter not set on agent or crew", "no timeout on agent execution", "while True in agent execution loop"],
         "remediation": "Set max_iterations, max_turns, or recursion_limit on all agent loops. Add timeout mechanisms. Implement circuit breakers to halt runaway execution."
       },
       "missing_circuit_breaker": {
+        "rule_id": "ER-v1-missing_circuit_breaker_between_agents",
         "title": "Missing Circuit Breaker Between Agents",
-        "description": "No isolation or failure boundary between agents \u2014 a failure in one propagates unchecked to all downstream",
+        "description": "No isolation or failure boundary between agents — a failure in one propagates unchecked to all downstream",
         "cvss_vector": "CVSS:4.0/AV:N/AC:H/AT:N/PR:L/UI:N/VC:N/VI:H/VA:H/SC:N/SI:H/SA:H",
         "severity": "high",
         "detection_hints": [
@@ -363,6 +390,7 @@
         "remediation": "Add failure isolation boundaries between agents. Implement circuit breakers that trip when error rates exceed thresholds. Limit blast radius of individual agent failures."
       },
       "missing_blast_radius_limit": {
+        "rule_id": "ER-v1-no_blast_radius_or_rate_limit_on_agent_actions",
         "title": "No Blast Radius or Rate Limit on Agent Actions",
         "description": "Agent can invoke unlimited downstream actions or API calls without throttling or scope caps",
         "cvss_vector": "CVSS:4.0/AV:N/AC:L/AT:N/PR:L/UI:N/VC:N/VI:H/VA:H/SC:N/SI:H/SA:H",
@@ -382,6 +410,7 @@
     "description": "Users manipulated into harmful decisions by trusting persuasive or authoritative agent outputs",
     "subcategories": {
       "no_human_in_the_loop": {
+        "rule_id": "ER-v1-no_human_in_the_loop_for_sensitive_actions",
         "title": "No Human-in-the-Loop for Sensitive Actions",
         "description": "Agent executes sensitive operations (file write, code exec, payments) without mandatory human approval",
         "cvss_vector": "CVSS:4.0/AV:N/AC:L/AT:N/PR:L/UI:N/VC:L/VI:H/VA:L/SC:N/SI:H/SA:N",
@@ -394,6 +423,7 @@
         "remediation": "Require human approval for sensitive operations (file writes, deletions, payments, code execution). Use approval hooks or human_input_mode settings."
       },
       "sensitive_data_in_output": {
+        "rule_id": "ER-v1-sensitive_data_logged_or_output_without_redaction",
         "title": "Sensitive Data Logged or Output Without Redaction",
         "description": "Agent outputs or logs expose PII, credentials, or confidential data without filtering",
         "cvss_vector": "CVSS:4.0/AV:N/AC:L/AT:N/PR:L/UI:N/VC:H/VI:N/VA:N/SC:N/SI:N/SA:N",
@@ -406,6 +436,7 @@
         "remediation": "Implement output filtering to redact PII, credentials, and internal data before returning results. Use DLP rules and pattern-based scrubbing."
       },
       "missing_action_confirmation": {
+        "rule_id": "ER-v1-missing_confirmation_gate_for_high_risk_actions",
         "title": "Missing Confirmation Gate for High-Risk Actions",
         "description": "High-impact actions (delete, send, pay, deploy) executed without explicit user confirmation step",
         "cvss_vector": "CVSS:4.0/AV:N/AC:L/AT:N/PR:L/UI:N/VC:L/VI:H/VA:H/SC:N/SI:H/SA:H",
@@ -418,6 +449,7 @@
         "remediation": "Add explicit confirmation gates before destructive / high-impact operations (delete, drop, send, deploy). Require user input before proceeding with high-impact actions."
       },
       "persuasive_agent_language": {
+        "rule_id": "ER-v1-persuasive_or_manipulative_agent_output_patterns",
         "title": "Persuasive or Manipulative Agent Output Patterns",
         "description": "Agent system prompt or backstory instructs it to use persuasive language that may manipulate users into unsafe decisions",
         "cvss_vector": "CVSS:4.0/AV:N/AC:H/AT:N/PR:L/UI:P/VC:L/VI:H/VA:N/SC:N/SI:H/SA:N",
@@ -437,6 +469,7 @@
     "description": "Compromised or misaligned agents act outside their intended scope without external triggering",
     "subcategories": {
       "missing_kill_switch": {
+        "rule_id": "ER-v1-no_kill_switch_or_emergency_stop_mechanism",
         "title": "No Kill Switch or Emergency Stop Mechanism",
         "description": "Agent system has no mechanism to immediately halt or terminate agent execution",
         "cvss_vector": "CVSS:4.0/AV:N/AC:H/AT:N/PR:L/UI:N/VC:L/VI:H/VA:H/SC:N/SI:H/SA:H",
@@ -445,8 +478,9 @@
         "remediation": "Implement an emergency stop mechanism to immediately halt agent execution across all endpoints. Maintain a centralized policy to disable agents organization-wide."
       },
       "missing_behavioral_guardrails": {
+        "rule_id": "ER-v1-no_behavioral_constraints_or_guardrails",
         "title": "No Behavioral Constraints or Guardrails",
-        "description": "Agent has no explicit operational constraints \u2014 can take any action its tools allow without scope limits",
+        "description": "Agent has no explicit operational constraints — can take any action its tools allow without scope limits",
         "cvss_vector": "CVSS:4.0/AV:N/AC:L/AT:N/PR:L/UI:N/VC:H/VI:H/VA:L/SC:H/SI:H/SA:N",
         "severity": "high",
         "detection_hints": [
@@ -457,6 +491,7 @@
         "remediation": "Define explicit operational constraints in the agent's configuration. Add input and output guardrails. Enforce output schema validation."
       },
       "unchecked_agent_delegation": {
+        "rule_id": "ER-v1-unchecked_agent_delegation",
         "title": "Unchecked Agent Delegation",
         "description": "Agent can delegate tasks to sub-agents with no scope, identity, or depth constraints",
         "cvss_vector": "CVSS:4.0/AV:N/AC:H/AT:N/PR:L/UI:N/VC:H/VI:H/VA:L/SC:H/SI:H/SA:N",
@@ -469,8 +504,9 @@
         "remediation": "Add callbacks before/after agent calls or input guardrails on delegating agents. Validate delegated tasks against a scope allowlist. Limit delegation depth."
       },
       "missing_agent_monitoring": {
+        "rule_id": "ER-v1-no_agent_behavioral_monitoring_or_observability",
         "title": "No Agent Behavioral Monitoring or Observability",
-        "description": "Agent actions, tool calls, and decisions are not logged or monitored \u2014 rogue behavior is undetectable",
+        "description": "Agent actions, tool calls, and decisions are not logged or monitored — rogue behavior is undetectable",
         "cvss_vector": "CVSS:4.0/AV:N/AC:H/AT:N/PR:L/UI:N/VC:H/VI:H/VA:L/SC:N/SI:N/SA:N",
         "severity": "medium",
         "detection_hints": ["no logging of tool invocations", "no audit trail for agent decisions", "verbose=False with no alternative observability"],

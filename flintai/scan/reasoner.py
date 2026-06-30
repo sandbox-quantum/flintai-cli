@@ -15,8 +15,8 @@ SESSION STORAGE:
 
 MULTI-PROVIDER SUPPORT:
   Model selection is handled via llm_provider.make_model() which reads
-  the AGENT_SCANNER_MODEL env var (provider:model format):
-    google            → bare Gemini model string (e.g. "gemini-2.5-flash")
+  the SCANNER_MODEL env var (provider:model format):
+    google            → bare Gemini model string (e.g. "gemini-3.5-flash")
     all others        → LiteLlm("provider/model") via llm_provider
 
 CONTROL PLANE (ASI compliance for our own scanner):
@@ -42,12 +42,7 @@ import time
 import uuid
 from typing import Any
 
-from google.adk.agents import LlmAgent
-from google.adk import Runner
-from google.adk.sessions import InMemorySessionService
-from google.genai import types as genai_types
 from flintai.schema import RepoFile
-from flintai.scan.llm_provider import make_model
 from flintai.scan.schema import AgentProfile, RawFinding
 from flintai.scan.secret_anonymizer import anonymize_secrets
 from flintai.scan.static_scanner import StaticFinding
@@ -55,6 +50,11 @@ from flintai.scan.taxonomy import AGENT_TAXONOMY
 from flintai.scan.tool_dispatcher import ToolDispatcher
 from flintai.scan.trace_logger_file import FileTraceLogger
 from flintai.scan.trace_logger_log import LogTraceLogger
+from google.adk.agents import LlmAgent
+from google.adk import Runner
+from google.adk.sessions import InMemorySessionService
+from google.genai import types as genai_types
+from flintai.scan.llm_provider import _safe_error, make_model
 
 logger = logging.getLogger(__name__)
 
@@ -63,11 +63,11 @@ logger = logging.getLogger(__name__)
 # The values below are the production defaults — override per-deployment
 # without code changes or redeployment.
 #
-#   ADK_MAX_ITERATIONS    — max tool-call rounds before forced stop      (default: 300)
+#   ADK_MAX_ITERATIONS    — max tool-call rounds before forced stop      (default: 20)
 #   ADK_MAX_FILES_FETCHED — max distinct files the agent may read        (default: 50)
 #   ADK_MAX_FETCH_TOKENS  — token budget for all fetch_file content      (default: 200000)
 #   ADK_LOOP_TIMEOUT_SECS — wall-clock timeout for the full ADK loop     (default: 600)
-MAX_ITERATIONS = int(os.getenv("ADK_MAX_ITERATIONS", "300"))
+MAX_ITERATIONS = int(os.getenv("ADK_MAX_ITERATIONS", "20"))
 MAX_FILES_FETCHED = int(os.getenv("ADK_MAX_FILES_FETCHED", "50"))
 MAX_FETCH_TOKENS = int(os.getenv("ADK_MAX_FETCH_TOKENS", "200000"))
 LOOP_TIMEOUT_SECS = int(os.getenv("ADK_LOOP_TIMEOUT_SECS", "600"))
@@ -391,7 +391,7 @@ def run_agentic_reasoning(
     Main entry point for v2 agentic reasoning using Google ADK.
 
     The ADK model is resolved via llm_provider.make_model() using the
-    AGENT_SCANNER_MODEL env var.
+    SCANNER_MODEL env var.
 
     Session storage uses InMemorySessionService (ephemeral, per-scan).
 
@@ -482,37 +482,38 @@ def run_agentic_reasoning(
         len(python_files),
     )
 
-    # Execute ADK reasoning loop
+    # Execute ADK reasoning loop.
+    #
+    # Always run the coroutine in a dedicated worker thread with a hard
+    # deadline. asyncio.run() works in that thread whether or not the caller
+    # already has a running event loop (Jupyter/FastAPI as well as the plain
+    # CLI path), and future.result(timeout=...) bounds the whole loop even
+    # when the model call never returns a control-plane event — the in-loop
+    # guard in _run_adk_async only fires between events, so a stalled LLM call
+    # would otherwise hang forever on the CLI path. On timeout we shut the
+    # pool down without waiting so we don't block on the stuck worker thread.
     exit_reason = "completed"
     final_text = ""
 
+    pool = concurrent.futures.ThreadPoolExecutor(max_workers=1)
     try:
-        try:
-            asyncio.get_running_loop()
-            # Inside an existing event loop (e.g. Jupyter, FastAPI).
-            # asyncio.run() would raise here — use a dedicated thread instead.
-            with concurrent.futures.ThreadPoolExecutor(max_workers=1) as pool:
-                future = pool.submit(
-                    asyncio.run,
-                    _run_adk_async(
-                        adk_agent, initial_ctx, dispatcher, session_id, tracer
-                    ),
-                )
-                final_text, exit_reason = future.result(timeout=LOOP_TIMEOUT_SECS + 30)
-        except RuntimeError:
-            # No running event loop — standard CLI path.
-            final_text, exit_reason = asyncio.run(
-                _run_adk_async(adk_agent, initial_ctx, dispatcher, session_id, tracer)
-            )
-
-    except concurrent.futures.TimeoutError:
-        logger.error(
-            "Thread-pool execution timed out after %ds", LOOP_TIMEOUT_SECS + 30
+        future = pool.submit(
+            asyncio.run,
+            _run_adk_async(adk_agent, initial_ctx, dispatcher, session_id, tracer),
         )
+        final_text, exit_reason = future.result(timeout=LOOP_TIMEOUT_SECS + 30)
+    except concurrent.futures.TimeoutError:
+        logger.error("ADK execution timed out after %ds", LOOP_TIMEOUT_SECS + 30)
         exit_reason = "timeout"
     except Exception as e:
-        logger.error("Unexpected error during ADK execution: %s", e, exc_info=True)
+        err_type = type(e).__name__
+        safe_msg = _safe_error(e)
+        first_line = safe_msg.split("\n", 1)[0]
+        logger.error("ADK execution failed (%s): %s", err_type, first_line)
+        logger.debug("ADK execution failed (full):\n%s", safe_msg, exc_info=True)
         exit_reason = "error"
+    finally:
+        pool.shutdown(wait=False)
 
     # Collect results
     findings = dispatcher.session_findings
