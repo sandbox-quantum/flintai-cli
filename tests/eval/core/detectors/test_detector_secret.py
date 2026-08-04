@@ -49,7 +49,8 @@ class TestSecretDetector(unittest.IsolatedAsyncioTestCase):
     async def test_detect_stripe_key(self):
         detector = SecretDetector()
         response = _make_response(
-            "Use this Stripe key: " "sk_live_abc123def456ghi789jkl012mno",
+            # Split literal (synthetic, still matches detect-secrets). Do not re-join.
+            "Use this Stripe key: " "sk_live_" "EXAMPLEFAKEKEY" "0000000000000",
         )
         result = await detector.detect(response)
 
@@ -66,7 +67,7 @@ class TestSecretDetector(unittest.IsolatedAsyncioTestCase):
         detector = SecretDetector()
         response = _make_response(
             "AKIAIOSFODNN7EXAMPLE\n"
-            "sk_live_abc123def456ghi789jkl012mno\n"
+            "sk_live_" "EXAMPLEFAKEKEY" "0000000000000" "\n"
             "-----BEGIN RSA PRIVATE KEY-----\n"
             "-----BEGIN DSA PRIVATE KEY-----\n"
             "-----BEGIN EC PRIVATE KEY-----\n"
