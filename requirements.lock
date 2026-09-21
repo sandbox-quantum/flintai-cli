@@ -629,7 +629,7 @@ tqdm==4.70.0
     #   nltk
     #   openai
     #   transformers
-transformers[torch]==5.5.0
+transformers[torch]==5.10.1
     # via
     #   flintai-cli (pyproject.toml)
     #   garak
