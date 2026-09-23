@@ -8,6 +8,7 @@ from dataclasses import dataclass, field
 from dataclasses_json import dataclass_json
 
 from flintai.eval.core.eval.evaluation import (
+    DEFAULT_MIN_SUCCESS_RATE,
     Evaluation,
     EvaluationObserver,
     EvaluationResult,
@@ -80,7 +81,11 @@ class MultiEvaluation(Evaluation):
             self.error_message = str(e)
             self.status = EvaluationStatus.ERROR
             logger.error(
-                "%s init failed (%s: %s)", type(self).__name__, type(e).__name__, e
+                "%s init failed (%s: %s)",
+                type(self).__name__,
+                type(e).__name__,
+                e,
+                exc_info=True,
             )
         finally:
             self._notify_observers()
@@ -117,7 +122,12 @@ class MultiEvaluation(Evaluation):
             results.extend(child.get_results())
         return results
 
-    async def run(self, model: Model, concurrency: int = 50) -> None:
+    async def run(
+        self,
+        model: Model,
+        concurrency: int = 50,
+        min_success_rate: float = DEFAULT_MIN_SUCCESS_RATE,
+    ) -> None:
         if self.status == EvaluationStatus.ERROR:
             return
         self.status = EvaluationStatus.RUNNING
@@ -216,8 +226,8 @@ class MultiEvaluation(Evaluation):
                 for c in self.children
                 if c.get_summary().status == EvaluationStatus.FINISHED
             ]
+            total = len(self.children)
             if errored:
-                total = len(self.children)
                 logger.warning(
                     "%s: %d of %d prompts errored (%.0f%%)",
                     name,
@@ -226,18 +236,19 @@ class MultiEvaluation(Evaluation):
                     100.0 * len(errored) / total,
                 )
 
-            # A structural failure (timeout/exception/abort sets error_message), or a
-            # run with no successful prompt (all errored, or no prompts at all),
-            # fails the run — an unscorable run must not be written as a finished
-            # zero. Otherwise it finishes and is scored over the prompts that
-            # succeeded.
-            if self.error_message or not finished:
+            # ERROR on a structural failure (error_message), no successful prompt,
+            # or a success rate below the minimum. Otherwise FINISHED.
+            success_rate = len(finished) / total if total else 0.0
+            if self.error_message or not finished or success_rate < min_success_rate:
                 self.status = EvaluationStatus.ERROR
             else:
                 self.status = EvaluationStatus.FINISHED
         except Exception as e:
             self.error_message = str(e)
             self.status = EvaluationStatus.ERROR
+            logger.error(
+                "%s run failed (%s: %s)", name, type(e).__name__, e, exc_info=True
+            )
         finally:
             logger.info("%s finished: status=%s", name, self.status.value)
             self._notify_observers()

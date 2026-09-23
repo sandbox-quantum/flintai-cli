@@ -112,9 +112,7 @@ class TestOllamaModel(unittest.IsolatedAsyncioTestCase):
         self.assertIn("score", extra_body["format"]["properties"])
 
     def test_init_sets_base_url(self):
-        with patch(
-            "flintai.eval.core.models.model_ollama.AsyncOpenAI"
-        ) as mock_cls:
+        with patch("flintai.eval.core.models.model_ollama.AsyncOpenAI") as mock_cls:
             OllamaModel(model="llama3", host="http://myhost:11434")
             mock_cls.assert_called_once_with(
                 base_url="http://myhost:11434/v1",
@@ -122,9 +120,7 @@ class TestOllamaModel(unittest.IsolatedAsyncioTestCase):
             )
 
     def test_init_default_host(self):
-        with patch(
-            "flintai.eval.core.models.model_ollama.AsyncOpenAI"
-        ) as mock_cls:
+        with patch("flintai.eval.core.models.model_ollama.AsyncOpenAI") as mock_cls:
             OllamaModel(model="llama3")
             mock_cls.assert_called_once_with(
                 base_url="http://localhost:11434/v1",

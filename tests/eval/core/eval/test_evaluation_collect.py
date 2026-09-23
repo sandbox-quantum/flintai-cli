@@ -90,7 +90,8 @@ class TestMultiEvaluation(unittest.IsolatedAsyncioTestCase):
         )
         await c.init()
 
-        await c.run(AsyncMock(), concurrency=2)
+        # min_success_rate=0 isolates the scoring behaviour from the threshold.
+        await c.run(AsyncMock(), concurrency=2, min_success_rate=0.0)
 
         # One prompt errored, one succeeded: the run finishes and is scored over
         # the successful prompt only.
@@ -182,7 +183,8 @@ class TestMultiEvaluation(unittest.IsolatedAsyncioTestCase):
         )
         await c.init()
 
-        await c.run(AsyncMock(), concurrency=2)
+        # min_success_rate=0 isolates the scoring behaviour from the threshold.
+        await c.run(AsyncMock(), concurrency=2, min_success_rate=0.0)
 
         # One prompt succeeded, so the run finishes and is scored over that
         # prompt only — the errored prompt contributes to neither side of the mean.

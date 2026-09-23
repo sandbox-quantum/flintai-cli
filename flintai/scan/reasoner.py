@@ -40,6 +40,7 @@ import logging
 import os
 import time
 import uuid
+from contextlib import suppress
 from typing import Any
 
 from flintai.schema import RepoFile
@@ -73,7 +74,7 @@ logger = logging.getLogger(__name__)
 #   ADK_MAX_FILES_FETCHED — max distinct files the agent may read        (default: 50)
 #   ADK_MAX_FETCH_TOKENS  — token budget for all fetch_file content      (default: 200000)
 #   ADK_LOOP_TIMEOUT_SECS — wall-clock timeout for the full ADK loop     (default: 600)
-MAX_ITERATIONS = int(os.getenv("ADK_MAX_ITERATIONS", "40"))
+MAX_ITERATIONS = int(os.getenv("ADK_MAX_ITERATIONS", "80"))
 MAX_FILES_FETCHED = int(os.getenv("ADK_MAX_FILES_FETCHED", "50"))
 MAX_FETCH_TOKENS = int(os.getenv("ADK_MAX_FETCH_TOKENS", "200000"))
 LOOP_TIMEOUT_SECS = int(os.getenv("ADK_LOOP_TIMEOUT_SECS", "600"))
@@ -338,58 +339,71 @@ async def _run_adk_async(
     iteration = 0
     loop_start = time.monotonic()
 
-    async for event in runner.run_async(
+    event_stream = runner.run_async(
         user_id=USER_ID,
         session_id=session_id,
         new_message=user_content,
-    ):
-        # ── Control plane guards ──────────────────────────────────────────
+    )
+    try:
+        async for event in event_stream:
+            # ── Control plane guards ──────────────────────────────────────
 
-        elapsed = time.monotonic() - loop_start
-        if elapsed > LOOP_TIMEOUT_SECS:
-            logger.warning(
-                "Timeout after %.1fs (limit=%ds)", elapsed, LOOP_TIMEOUT_SECS
-            )
-            exit_reason = "timeout"
-            break
-
-        if hasattr(event, "actions") and event.actions:
-            iteration += 1
-            tracer.set_iteration(iteration)
-            logger.debug("Iteration %d/%d", iteration, MAX_ITERATIONS)
-            if iteration >= MAX_ITERATIONS:
-                logger.warning("Max iterations (%d) reached", MAX_ITERATIONS)
-                exit_reason = "max_iterations"
+            elapsed = time.monotonic() - loop_start
+            if elapsed > LOOP_TIMEOUT_SECS:
+                logger.warning(
+                    "Timeout after %.1fs (limit=%ds)", elapsed, LOOP_TIMEOUT_SECS
+                )
+                exit_reason = "timeout"
                 break
 
-        if dispatcher._call_counts.get("fetch_file", 0) > MAX_FILES_FETCHED:
-            logger.warning("File fetch limit (%d) reached", MAX_FILES_FETCHED)
-            exit_reason = "max_files"
-            break
+            if hasattr(event, "actions") and event.actions:
+                iteration += 1
+                tracer.set_iteration(iteration)
+                logger.debug("Iteration %d/%d", iteration, MAX_ITERATIONS)
+                if iteration >= MAX_ITERATIONS:
+                    logger.warning("Max iterations (%d) reached", MAX_ITERATIONS)
+                    exit_reason = "max_iterations"
+                    break
 
-        if dispatcher.tokens_consumed > MAX_FETCH_TOKENS:
-            logger.warning(
-                "Token budget exhausted (%d/%d)",
-                dispatcher.tokens_consumed,
-                MAX_FETCH_TOKENS,
-            )
-            exit_reason = "max_tokens"
-            break
+            if dispatcher._call_counts.get("fetch_file", 0) > MAX_FILES_FETCHED:
+                logger.warning("File fetch limit (%d) reached", MAX_FILES_FETCHED)
+                exit_reason = "max_files"
+                break
 
-        if dispatcher._call_counts.get("run_targeted_bandit", 0) > 5:
-            logger.warning("Bandit call limit (5) reached")
-            exit_reason = "max_bandit_calls"
-            break
+            if dispatcher.tokens_consumed > MAX_FETCH_TOKENS:
+                logger.warning(
+                    "Token budget exhausted (%d/%d)",
+                    dispatcher.tokens_consumed,
+                    MAX_FETCH_TOKENS,
+                )
+                exit_reason = "max_tokens"
+                break
 
-        if dispatcher._call_counts.get("compute_cvss", 0) > 50:
-            logger.warning("compute_cvss call limit (50) reached")
-            exit_reason = "max_cvss_calls"
-            break
+            if dispatcher._call_counts.get("run_targeted_bandit", 0) > 5:
+                logger.warning("Bandit call limit (5) reached")
+                exit_reason = "max_bandit_calls"
+                break
 
-        if hasattr(event, "content") and event.content:
-            for part in event.content.parts or []:
-                if hasattr(part, "text") and part.text:
-                    final_text += part.text
+            if dispatcher._call_counts.get("compute_cvss", 0) > 50:
+                logger.warning("compute_cvss call limit (50) reached")
+                exit_reason = "max_cvss_calls"
+                break
+
+            if hasattr(event, "content") and event.content:
+                for part in event.content.parts or []:
+                    if hasattr(part, "text") and part.text:
+                        final_text += part.text
+    finally:
+        # ADK's Runner wraps this generator's `yield` in an OTEL span
+        # (google/adk/runners.py::_run_with_trace). Every `break` above
+        # leaves it suspended mid-span rather than exhausted. Left alone, the
+        # event loop's implicit shutdown_asyncgens() closes it later — in a
+        # different contextvars.Context than the one that attached the span,
+        # which makes the span's detach raise "Token ... was created in a
+        # different Context". Closing it here, in this same coroutine, closes
+        # the span in the Context that opened it.
+        with suppress(Exception):
+            await event_stream.aclose()
 
     return final_text, exit_reason
 

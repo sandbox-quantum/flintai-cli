@@ -34,6 +34,9 @@ class ADKModel(Model):
             content (e.g. a tool call). If False (default),
             return the final text response after all tool
             calls complete.
+        headers: Extra HTTP headers sent on every request, e.g. an
+            ``Authorization`` header for a deployment gated by an
+            app-level bearer token rather than Cloud Run IAM.
     """
 
     def __init__(
@@ -42,12 +45,14 @@ class ADKModel(Model):
         host: str = "http://localhost:8000",
         user_id: str = "aired",
         immediate_result: bool = False,
+        headers: dict[str, str] | None = None,
         connector_factory: Callable[[], aiohttp.BaseConnector] | None = None,
     ):
         self._app_name = app_name
         self._host = host.rstrip("/")
         self._user_id = user_id
         self._immediate_result = immediate_result
+        self._headers = headers or {}
         # Optional aiohttp connector factory; the worker passes the SSRF-guarded
         # one (platform/ssrf.py). None keeps the default connector.
         self._connector_factory = connector_factory
@@ -58,7 +63,7 @@ class ADKModel(Model):
     ) -> str:
         """Create a new session for this request."""
         url = f"{self._host}/apps/{self._app_name}/users/{self._user_id}/sessions"
-        async with session.post(url, json={}) as resp:
+        async with session.post(url, json={}, headers=self._headers) as resp:
             resp.raise_for_status()
             data = await resp.json()
             return data["id"]
@@ -97,6 +102,7 @@ class ADKModel(Model):
             async with session.post(
                 f"{self._host}/run",
                 json=payload,
+                headers=self._headers,
             ) as resp:
                 resp.raise_for_status()
                 events = await resp.json()
@@ -125,7 +131,18 @@ class ADKModel(Model):
         events: list[dict],
     ) -> str | None:
         """Extract the last text response, skipping tool
-        call/response events."""
+        call/response events.
+
+        FIXME: the skip below drops a *mixed* event — one turn carrying both
+        narration and a tool call, e.g. ``[{"text": "Let me look that up"},
+        {"functionCall": ...}]``, which Gemini emits routinely — losing the text
+        with it. The test is also redundant for pure-tool events, since those
+        carry no ``text`` key and the ``if texts`` check below already skips
+        them. Deleting the whole ``any(...)`` block both fixes and simplifies
+        this, as done in ``model_vertex_agent_runtime._extract_final``. Left
+        unchanged here only to keep that PR scoped; needs its own change plus a
+        mixed-event test.
+        """
         for event in reversed(events):
             content = event.get("content")
             if content is None:

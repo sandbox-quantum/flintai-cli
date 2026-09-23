@@ -95,6 +95,7 @@ class Model(ABC):
                 prompt_len,
                 type(e).__name__,
                 e,
+                exc_info=True,
             )
             raise
 

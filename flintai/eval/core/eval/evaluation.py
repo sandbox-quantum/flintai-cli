@@ -22,6 +22,9 @@ class EvaluationStatus(str, Enum):
 
 EvaluationObserver = Callable[["Evaluation"], None]
 
+# Min fraction of prompts that must succeed for a run to be scored (else ERROR).
+DEFAULT_MIN_SUCCESS_RATE = 0.9
+
 
 @dataclass_json
 @dataclass
@@ -96,7 +99,12 @@ class Evaluation(ABC):
         pass
 
     @abstractmethod
-    async def run(self, model: Model, concurrency: int = 50):
+    async def run(
+        self,
+        model: Model,
+        concurrency: int = 50,
+        min_success_rate: float = DEFAULT_MIN_SUCCESS_RATE,
+    ):
         pass
 
     @abstractmethod

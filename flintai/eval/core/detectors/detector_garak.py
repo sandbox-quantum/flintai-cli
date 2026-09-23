@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import threading
 from typing import TYPE_CHECKING
 
 from flintai.eval.common.schema import PartType, Role
@@ -14,6 +15,17 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
+# Process-wide cache of loaded garak plugins, keyed by detector_name. Some
+# detectors (e.g. the packagehallucination family) pull a multi-hundred-MB
+# third-party package registry into memory on first use; a fresh GarakDetector
+# is built per job/probe (see evaluation_garak_probe.py), so without this
+# cache every job reloads and re-materializes that dataset from scratch,
+# multiplying memory with concurrent and successive jobs instead of paying
+# the cost once per worker process. Plugins are read-only after their first
+# `detect()` call, so sharing one instance across jobs/threads is safe.
+_plugin_cache: dict[str, object] = {}
+_plugin_cache_lock = threading.Lock()
+
 
 class GarakDetector(Detector):
     """A detector backed by a garak detector plugin."""
@@ -23,11 +35,23 @@ class GarakDetector(Detector):
         self._detector = None
 
     def _ensure_loaded(self):
-        if self._detector is None:
-            logger.debug("Loading garak detector: %s", self._detector_name)
-            self._detector = require_garak()._plugins.load_plugin(
-                self._detector_name,
-            )
+        if self._detector is not None:
+            return self._detector
+
+        cached = _plugin_cache.get(self._detector_name)
+        if cached is None:
+            # detect() runs on a thread-pool thread (via asyncio.to_thread), so
+            # concurrent jobs can race here; double-checked locking keeps the
+            # plugin load (and its dataset fetch) to once per process.
+            with _plugin_cache_lock:
+                cached = _plugin_cache.get(self._detector_name)
+                if cached is None:
+                    logger.debug("Loading garak detector: %s", self._detector_name)
+                    cached = require_garak()._plugins.load_plugin(
+                        self._detector_name,
+                    )
+                    _plugin_cache[self._detector_name] = cached
+        self._detector = cached
         return self._detector
 
     async def detect(self, response: ModelResponse) -> DetectorResult:

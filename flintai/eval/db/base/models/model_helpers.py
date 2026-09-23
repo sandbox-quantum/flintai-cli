@@ -137,6 +137,7 @@ def _create_inner_model(
             app_name=db_model.model_name,
             host=db_model.host or "http://localhost:8000",
             immediate_result=db_model.immediate_result,
+            headers=headers or None,
             connector_factory=connector_factory,
         )
 
@@ -189,6 +190,25 @@ def _create_inner_model(
             headers=headers or None,
             input_path=db_model.input_path or "input",
             output_path=db_model.output_path or "output",
+            connector_factory=connector_factory,
+        )
+
+    elif db_model.type == ModelType.VERTEX_AGENT_RUNTIME:
+        from flintai.eval.core.models.model_vertex_agent_runtime import (  # noqa: PLC0415 - patched at source in tests
+            DEFAULT_CLASS_METHOD,
+            DEFAULT_USER_ID,
+            VertexAgentRuntimeModel,
+        )
+
+        # The engine URL already carries the :streamQuery suffix, so `endpoint`
+        # is not appended here the way it is for the generic HTTP types.
+        return VertexAgentRuntimeModel(
+            url=db_model.host or "",
+            credential=key or None,
+            headers=headers or None,
+            user_id=db_model.user_id or DEFAULT_USER_ID,
+            class_method=db_model.class_method or DEFAULT_CLASS_METHOD,
+            immediate_result=db_model.immediate_result,
             connector_factory=connector_factory,
         )
 

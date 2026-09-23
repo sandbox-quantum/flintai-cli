@@ -6,6 +6,7 @@ from dataclasses_json import dataclass_json
 
 from flintai.eval.common.schema import Session
 from flintai.eval.core.eval.evaluation import (
+    DEFAULT_MIN_SUCCESS_RATE,
     Evaluation,
     EvaluationResult,
     EvaluationStatus,
@@ -47,7 +48,13 @@ class SingleEvaluation(Evaluation):
             error_messages=[self.error_message] if self.error_message else [],
         )
 
-    async def run(self, model: Model, concurrency: int = 50):
+    async def run(
+        self,
+        model: Model,
+        concurrency: int = 50,
+        min_success_rate: float = DEFAULT_MIN_SUCCESS_RATE,
+    ):
+        # min_success_rate is unused for a leaf; kept to match the base signature.
         await self.execute(model)
 
     async def execute(self, model: Model):
@@ -63,7 +70,7 @@ class SingleEvaluation(Evaluation):
         except Exception as e:
             self.error_message = str(e)
             self.status = EvaluationStatus.ERROR
-            logger.error("%s failed (%s: %s)", name, type(e).__name__, e)
+            logger.error("%s failed (%s: %s)", name, type(e).__name__, e, exc_info=True)
         finally:
             self._notify_observers()
 

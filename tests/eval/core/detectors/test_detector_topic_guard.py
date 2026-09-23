@@ -104,11 +104,12 @@ class TestTopicGuardDetectorDetect(
         )
         await detector.detect(_make_response("hello"))
 
-        call_args = mock_model.generate.call_args[0][0]
-        sent_text = call_args.content.parts[0].text
-        self.assertIn("Book flights", sent_text)
-        self.assertIn("Be polite", sent_text)
-        self.assertIn("hello", sent_text)
+        messages = mock_model.generate.call_args[0][0]
+        system_text = messages[0].content.parts[0].text
+        user_text = messages[1].content.parts[0].text
+        self.assertIn("Book flights", system_text)
+        self.assertIn("Be polite", system_text)
+        self.assertIn("hello", user_text)
 
     async def test_none_message(self):
         mock_model = AsyncMock()

@@ -290,6 +290,7 @@ class TestCreateInnerModelADK(unittest.TestCase):
             app_name="my-app",
             host="http://adk-host:9000",
             immediate_result=True,
+            headers=None,
             connector_factory=None,
         )
 
@@ -306,6 +307,26 @@ class TestCreateInnerModelADK(unittest.TestCase):
             app_name="my-app",
             host="http://localhost:8000",
             immediate_result=False,
+            headers=None,
+            connector_factory=None,
+        )
+
+    @patch(
+        "flintai.eval.core.models.model_adk.ADKModel",
+    )
+    def test_adk_headers_passed_through(self, MockModel):
+        db = _db_model(
+            type=ModelType.ADK,
+            model_name="my-app",
+            host="http://adk-host:9000",
+            headers={"Authorization": "Bearer test-token"},
+        )
+        _create_inner_model(db)
+        MockModel.assert_called_once_with(
+            app_name="my-app",
+            host="http://adk-host:9000",
+            immediate_result=False,
+            headers={"Authorization": "Bearer test-token"},
             connector_factory=None,
         )
 

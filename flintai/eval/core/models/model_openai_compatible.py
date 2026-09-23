@@ -12,7 +12,10 @@ from pydantic import BaseModel
 
 from flintai.eval.common import converter_openai
 from flintai.eval.common.schema import Message
-from flintai.eval.core.models.model import Model, ModelResponse
+from flintai.eval.core.models.model import (
+    Model,
+    ModelResponse,
+)
 from flintai.eval.core.models.response_schema import to_openai_response_format
 
 

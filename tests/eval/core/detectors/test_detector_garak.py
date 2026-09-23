@@ -2,6 +2,7 @@ import unittest
 from unittest.mock import MagicMock, patch
 
 from flintai.eval.common.schema import Content, Message, Part, Role
+from flintai.eval.core.detectors import detector_garak
 from flintai.eval.core.detectors.detector_garak import (
     GarakDetector,
     _create_conversation,
@@ -146,6 +147,7 @@ class TestGarakDetector(unittest.IsolatedAsyncioTestCase):
 
     @patch("garak._plugins.load_plugin")
     async def test_lazy_loads_plugin(self, mock_load_plugin):
+        detector_garak._plugin_cache.pop("detectors.test.Test", None)
         mock_garak = MagicMock()
         mock_garak.detect.return_value = [0.0]
         mock_load_plugin.return_value = mock_garak
@@ -154,6 +156,29 @@ class TestGarakDetector(unittest.IsolatedAsyncioTestCase):
         await detector.detect(_make_response("output"))
 
         mock_load_plugin.assert_called_once_with("detectors.test.Test")
+
+    @patch("garak._plugins.load_plugin")
+    async def test_shares_loaded_plugin_across_instances(self, mock_load_plugin):
+        """Two detectors for the same name (e.g. separate jobs) load once.
+
+        This is the regression case for the eval-worker OOMs: a fresh
+        GarakDetector is built per job, and some plugins (the
+        packagehallucination family) pull a large dataset into memory on
+        load, so reloading per instance multiplies memory with concurrent
+        or successive jobs.
+        """
+        detector_garak._plugin_cache.pop("detectors.test.Shared", None)
+        mock_garak = MagicMock()
+        mock_garak.detect.return_value = [0.0]
+        mock_load_plugin.return_value = mock_garak
+
+        first = GarakDetector("detectors.test.Shared")
+        second = GarakDetector("detectors.test.Shared")
+        await first.detect(_make_response("output"))
+        await second.detect(_make_response("output"))
+
+        mock_load_plugin.assert_called_once_with("detectors.test.Shared")
+        self.assertIs(first._ensure_loaded(), second._ensure_loaded())
 
 
 class TestGarakDetectorApiKeyE2E(unittest.IsolatedAsyncioTestCase):
