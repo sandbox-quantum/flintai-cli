@@ -24,6 +24,7 @@ class ModelType(str, Enum):
     OPENAI_COMPATIBLE = "openai_compatible"
     GENERIC_HTTP = "generic_http"
     LANGSERVE = "langserve"
+    VERTEX_AGENT_RUNTIME = "vertex_agent_runtime"
 
 
 @dataclass_json
@@ -51,8 +52,12 @@ class DbModel:
     host: str | None = None
     endpoint: str | None = None
 
-    # -- adk --
+    # -- adk / vertex_agent_runtime --
     immediate_result: bool = False
+
+    # -- vertex_agent_runtime --
+    user_id: str | None = None
+    class_method: str | None = None
 
     # -- generic_http / openai_compatible / langserve --
     headers: dict[str, str] = field(default_factory=dict)

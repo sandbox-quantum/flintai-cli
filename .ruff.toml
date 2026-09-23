@@ -1,0 +1,46 @@
+# Repo-wide lint + format config. Kept at the root so editors, a bare `ruff`,
+# and the pre-commit hook all find it with no flags.
+#
+# Do not add [tool.ruff] to a nested pyproject.toml: ruff walks *up* from each
+# file, so a nested section shadows this one for that whole subtree.
+
+src = [
+  ".",
+]
+
+line-length = 88
+target-version = "py311"
+
+[lint]
+select = [
+    "E", # pycodestyle errors
+    "F", # pyflakes
+    "W", # pycodestyle warnings
+    "B", # flake8-bugbear
+    "C4", # flake8-comprehensions
+    # "I", conflicts with import rewritting in release process
+    "TID253", # banned-module-level-imports
+]
+
+# The four UP rules below are enabled-but-ignored rather than fixed: each
+# changes runtime behaviour. Re-enable one at a time.
+ignore = [
+    "E501",  # line length is the formatter's job
+    "UP045", # mostly `Optional[x]` as a runtime value in Pydantic factories
+    "UP031", # % -> f-string, unsafe because % differs for tuples/dicts
+    "UP042", # `class X(str, Enum)` -> StrEnum changes str() output
+    "UP046",
+]
+
+# Bugbear findings are usually real bugs; a mechanical fix papers over the cause.
+unfixable = ["B"]
+
+[lint.per-file-ignores]
+"__init__.py" = ["E402"]
+"tests/**" = ["TID253"]
+
+[format]
+quote-style = "double"
+exclude = [
+  "tests/**",
+]

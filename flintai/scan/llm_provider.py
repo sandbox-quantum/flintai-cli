@@ -28,10 +28,11 @@ import os
 import re
 from typing import Any
 
-from . import ADKModel
+from google.adk.models.google_llm import Gemini
 from google.adk.models.llm_request import LlmRequest
 from google.genai import types as genai_types
-from google.adk.models.google_llm import Gemini
+
+from . import ADKModel
 
 logger = logging.getLogger(__name__)
 
@@ -180,11 +181,12 @@ def make_model(
 
     LiteLlm = _import_litellm()
     return LiteLlm(
-       model=name,
-       temperature=temperature,
-       drop_params=True,
-       **extra_args,
+        model=name,
+        temperature=temperature,
+        drop_params=True,
+        **extra_args,
     )
+
 
 def is_anthropic_model(model: ADKModel) -> bool:
     """Return True if *model* looks like an Anthropic / Claude model."""

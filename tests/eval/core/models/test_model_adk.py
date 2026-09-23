@@ -157,6 +157,67 @@ class TestADKModel(unittest.IsolatedAsyncioTestCase):
         payload = run_call.kwargs["json"]
         self.assertEqual(payload["appName"], "test_app")
 
+    @patch("flintai.eval.core.models.model_adk.aiohttp.ClientSession")
+    async def test_headers_sent_on_both_calls(self, mock_session_cls):
+        mock_session = _make_aiohttp_session_with_calls(
+            [
+                {"id": "session-1"},
+                [
+                    {
+                        "author": "test_app",
+                        "content": {
+                            "role": "model",
+                            "parts": [{"text": "ok"}],
+                        },
+                    },
+                ],
+            ]
+        )
+        mock_session_cls.return_value = mock_session
+
+        model = ADKModel(
+            app_name="test_app",
+            host="http://myhost:9000",
+            headers={"Authorization": "Bearer test-token"},
+        )
+        msg = Message(content=Content.text(Role.USER, "Hi"))
+        await model.generate(msg)
+
+        create_session_call, run_call = mock_session.post.call_args_list
+        self.assertEqual(
+            create_session_call.kwargs["headers"],
+            {"Authorization": "Bearer test-token"},
+        )
+        self.assertEqual(
+            run_call.kwargs["headers"],
+            {"Authorization": "Bearer test-token"},
+        )
+
+    @patch("flintai.eval.core.models.model_adk.aiohttp.ClientSession")
+    async def test_no_headers_defaults_to_empty_dict(self, mock_session_cls):
+        mock_session = _make_aiohttp_session_with_calls(
+            [
+                {"id": "session-1"},
+                [
+                    {
+                        "author": "test_app",
+                        "content": {
+                            "role": "model",
+                            "parts": [{"text": "ok"}],
+                        },
+                    },
+                ],
+            ]
+        )
+        mock_session_cls.return_value = mock_session
+
+        model = ADKModel(app_name="test_app", host="http://myhost:9000")
+        msg = Message(content=Content.text(Role.USER, "Hi"))
+        await model.generate(msg)
+
+        for call in mock_session.post.call_args_list:
+            self.assertEqual(call.kwargs["headers"], {})
+
 
 if __name__ == "__main__":
     unittest.main()

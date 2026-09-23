@@ -6,7 +6,11 @@ from pydantic import BaseModel
 
 from flintai.eval.common import converter_genai
 from flintai.eval.common.schema import Message, Role
-from flintai.eval.core.models.model import Model, ModelResponse, ResponseStatus
+from flintai.eval.core.models.model import (
+    Model,
+    ModelResponse,
+    ResponseStatus,
+)
 
 # Safety settings that disable content blocking across every active harm
 # category. Red-teaming needs the attacker/judge model to see and produce

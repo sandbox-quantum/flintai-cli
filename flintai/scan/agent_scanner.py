@@ -19,7 +19,6 @@ from datetime import UTC, datetime
 from typing import Any
 
 from flintai.scan.constants import (
-    PYTHON_FILE_EXTENSION,
     REQUIREMENT_FILE_NAMES,
     SEVERITY_ORDER,
     VALID_SEVERITIES,
@@ -35,7 +34,6 @@ from flintai.scan.schema import (
     Finding,
     InventoryLike,
     RawFinding,
-    ScanConfig,
     ScanReport,
     TriageDismissed,
     TriageDowngraded,
@@ -807,4 +805,3 @@ def run_core(
     )
 
     return report
-

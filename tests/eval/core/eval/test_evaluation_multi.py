@@ -215,7 +215,19 @@ class TestMultiEvaluation(unittest.TestCase):
         self.assertEqual(multi.status, EvaluationStatus.INITIALIZED)
         self.assertEqual(len(multi.children), 1)
 
-    def test_partial_failure_still_finishes(self):
+    def test_partial_failure_finishes_below_threshold_when_disabled(self):
+        children = [GracefulChild(should_fail=True), GracefulChild(should_fail=False)]
+        multi = StubMultiEvaluation(children=children)
+        asyncio.run(multi.init())
+        model = MagicMock(spec=Model)
+
+        # Threshold disabled: any success finishes the run.
+        asyncio.run(multi.run(model, concurrency=1, min_success_rate=0.0))
+
+        self.assertEqual(multi.status, EvaluationStatus.FINISHED)
+
+    def test_below_min_success_rate_is_error(self):
+        # 1 of 2 succeed (50%) < default 0.9 -> ERROR.
         children = [GracefulChild(should_fail=True), GracefulChild(should_fail=False)]
         multi = StubMultiEvaluation(children=children)
         asyncio.run(multi.init())
@@ -223,7 +235,28 @@ class TestMultiEvaluation(unittest.TestCase):
 
         asyncio.run(multi.run(model, concurrency=1))
 
-        # At least one prompt succeeded, so the run finishes despite the error.
+        self.assertEqual(multi.status, EvaluationStatus.ERROR)
+
+    def test_meets_min_success_rate_finishes(self):
+        # 9 of 10 succeed (90%) >= default 0.9 -> FINISHED.
+        children = [GracefulChild(should_fail=(i == 0)) for i in range(10)]
+        multi = StubMultiEvaluation(children=children)
+        asyncio.run(multi.init())
+        model = MagicMock(spec=Model)
+
+        asyncio.run(multi.run(model, concurrency=1))
+
+        self.assertEqual(multi.status, EvaluationStatus.FINISHED)
+
+    def test_min_success_rate_is_configurable(self):
+        # 1 of 2 succeed (50%) >= a lowered 0.4 threshold -> FINISHED.
+        children = [GracefulChild(should_fail=True), GracefulChild(should_fail=False)]
+        multi = StubMultiEvaluation(children=children)
+        asyncio.run(multi.init())
+        model = MagicMock(spec=Model)
+
+        asyncio.run(multi.run(model, concurrency=1, min_success_rate=0.4))
+
         self.assertEqual(multi.status, EvaluationStatus.FINISHED)
 
     def test_all_errored_is_error(self):

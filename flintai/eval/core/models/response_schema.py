@@ -28,6 +28,18 @@ from flintai.eval.core.models.model import (
     extract_text_from_message,
 )
 
+
+class ModelResponseParseError(ValueError):
+    """A model/judge response could not be parsed into the target schema.
+
+    A ``ValueError`` subclass, so any existing ``except ValueError`` handling
+    keeps working unchanged; the distinct type lets the worker's error
+    categorization (see ``platform/worker.py::_classify_error_category``)
+    distinguish this from other permanent failures for dashboard/log
+    discoverability.
+    """
+
+
 logger = logging.getLogger(__name__)
 
 # TypeVar rather than PEP 695 `[T: BaseModel]` syntax: eval/core is exported to
@@ -110,7 +122,7 @@ def parse_model_response(response: ModelResponse, schema: type[T]) -> T:  # noqa
     parses.
     """
     if response.message is None:
-        raise ValueError("model returned no message to parse")
+        raise ModelResponseParseError("model returned no message to parse")
     return parse_json_text(extract_text_from_message(response.message), schema)
 
 
@@ -131,6 +143,6 @@ def parse_json_text(text: str, schema: type[T]) -> T:  # noqa: UP047
             schema.__name__,
             text,
         )
-        raise ValueError(
+        raise ModelResponseParseError(
             f"model output did not match schema {schema.__name__}"
         ) from first_error
