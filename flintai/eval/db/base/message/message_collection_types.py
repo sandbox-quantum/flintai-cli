@@ -6,6 +6,7 @@ from dataclasses_json import dataclass_json
 
 from flintai.eval.common.reference import Reference, ReferenceType
 from flintai.eval.common.utils import datetime_config, generate_id, now_utc
+from flintai.eval.db.base.common_types import SortDirection
 
 
 class MessageCollectionType(str, Enum):
@@ -50,11 +51,6 @@ class DbMessageCollection:
             ReferenceType.MESSAGE_COLLECTION,
             self.description,
         )
-
-
-class SortDirection(str, Enum):
-    ASC = "asc"
-    DESC = "desc"
 
 
 class MessageCollectionSortField(str, Enum):

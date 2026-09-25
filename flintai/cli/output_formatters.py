@@ -111,31 +111,47 @@ class SarifScanOutputFormatter(ScanOutputFormatter):
                     rule["help"] = {"text": finding.remediation}
                 rules.append(rule)
 
+            # A location's URI must be a file path. Evidence carries one; an
+            # affected component's `name` does not — it is a free-text label the
+            # reasoning model writes, and for AI findings `path` is never set, so
+            # the old `comp.path or comp.name` fallback published things like
+            # "request_return", "check_order" and "agent.py:app" as artifact
+            # URIs. Which label it chose varied run to run, so the same
+            # vulnerability landed under a different location on each scan while
+            # the correct file sat in `relatedLocations` all along.
+            #
+            # Preference order is therefore evidence file, then a component that
+            # carries a real `path` (static findings set one). A component name
+            # is never used: no location beats a wrong one, and the names are
+            # preserved under `properties.affectedComponents`.
             locations = []
-            for comp in finding.affected_components or []:
+            for ev in finding.evidence or []:
+                if not ev.file:
+                    continue
                 loc: dict[str, Any] = {
                     "physicalLocation": {
-                        "artifactLocation": {
-                            "uri": self._normalize_uri(comp.path or comp.name)
-                        },
+                        "artifactLocation": {"uri": self._normalize_uri(ev.file)},
                     },
                 }
+                if ev.line:
+                    loc["physicalLocation"]["region"] = {"startLine": ev.line}
+                    if ev.column:
+                        loc["physicalLocation"]["region"]["startColumn"] = ev.column
                 locations.append(loc)
 
-            for ev in finding.evidence or []:
-                if ev.file and not locations:
-                    loc = {
-                        "physicalLocation": {
-                            "artifactLocation": {"uri": self._normalize_uri(ev.file)},
-                        },
-                    }
-                    if ev.line:
-                        loc["physicalLocation"]["region"] = {
-                            "startLine": ev.line,
+            if not locations:
+                for comp in finding.affected_components or []:
+                    if not comp.path:
+                        continue
+                    locations.append(
+                        {
+                            "physicalLocation": {
+                                "artifactLocation": {
+                                    "uri": self._normalize_uri(comp.path)
+                                },
+                            },
                         }
-                        if ev.column:
-                            loc["physicalLocation"]["region"]["startColumn"] = ev.column
-                    locations.append(loc)
+                    )
 
             related_locations = []
             for idx, ev in enumerate(finding.evidence or []):
@@ -194,6 +210,14 @@ class SarifScanOutputFormatter(ScanOutputFormatter):
                 props["source"] = finding.source
             if finding.ai_spm_severity:
                 props["severity"] = finding.ai_spm_severity
+            # Kept because these no longer appear as location URIs. For an AI
+            # finding this is the agent, tool or function the model named, which
+            # is useful context even though it is not a path.
+            component_names = [
+                comp.name for comp in finding.affected_components or [] if comp.name
+            ]
+            if component_names:
+                props["affectedComponents"] = component_names
             if finding.hallucination_flag:
                 props["hallucinationFlag"] = True
             if props:

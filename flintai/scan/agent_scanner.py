@@ -50,6 +50,7 @@ from flintai.scan.static_scanner import (
 from flintai.scan.taxonomy import (
     AGENT_TAXONOMY,
     get_finding_metadata,
+    resolve_subcategory,
 )
 from flintai.scan.triage import (
     build_agent_context as build_triage_context,
@@ -293,7 +294,13 @@ def convert_ai_findings(ai_findings: list[RawFinding]) -> list[Finding]:
                 continue
 
             subcategory = raw.get("subcategory", "unvalidated_tool_input")
-            category = raw.get("category", "asi02_tool_misuse").lower()
+            # The category is derived, never read off the raw finding. See
+            # taxonomy.category_for_subcategory: the reasoning model was asked
+            # for a key the prompt never showed it, so it inferred one from the
+            # human title and got it wrong for five of the ten categories.
+            subcategory = resolve_subcategory(subcategory) or subcategory
+            meta = get_finding_metadata(subcategory)
+            category = meta["category"]
 
             is_beyond = category == "beyond_asi"
 
@@ -333,8 +340,6 @@ def convert_ai_findings(ai_findings: list[RawFinding]) -> list[Finding]:
                     severity,
                 )
                 severity = "medium"
-
-            meta = get_finding_metadata(subcategory)
 
             # Validate confidence value
             valid_confidences = {"high", "medium", "low"}

@@ -7,6 +7,7 @@ from dataclasses_json import dataclass_json
 from flintai.eval.common.reference import Reference
 from flintai.eval.common.utils import datetime_config, generate_id, now_utc
 from flintai.eval.core.eval.evaluation import EvaluationSummary
+from flintai.eval.db.base.common_types import SortDirection
 
 
 @dataclass_json
@@ -37,11 +38,6 @@ class ModelEvaluationRunSortField(str, Enum):
     STARTED = "started_at"
     FINISHED = "finished_at"
     SCORE = "score"
-
-
-class SortDirection(str, Enum):
-    ASC = "asc"
-    DESC = "desc"
 
 
 @dataclass_json

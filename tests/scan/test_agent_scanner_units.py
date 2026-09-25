@@ -392,7 +392,6 @@ class TestReportFindingEvidenceFields(unittest.TestCase):
 
         dispatcher = ToolDispatcher(repo_files={}, agents=[], static_findings=[])
         dispatcher.report_finding(
-            category="asi01_agent_goal_hijack",
             subcategory="direct_prompt_injection",
             title="Test",
             description="desc",
@@ -417,7 +416,6 @@ class TestReportFindingEvidenceFields(unittest.TestCase):
 
         dispatcher = ToolDispatcher(repo_files={}, agents=[], static_findings=[])
         dispatcher.report_finding(
-            category="asi01_agent_goal_hijack",
             subcategory="direct_prompt_injection",
             title="Test",
             description="desc",

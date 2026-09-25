@@ -443,6 +443,61 @@ class TestScanSarif(unittest.TestCase):
             rel_uri.startswith("/"), f"Related URI missing leading slash: {rel_uri}"
         )
 
+    def test_location_uri_comes_from_evidence_not_component_name(self):
+        # Regression: the primary location used `comp.path or comp.name`, and an
+        # AI finding's component has no path — so the model's free-text label
+        # ("request_return", "check_order", "agent.py:app") was published as the
+        # artifact URI, varying between runs while the real file sat unused in
+        # relatedLocations.
+        report = _make_scan_report()
+        finding = report.findings[0]
+        finding.affected_components = [AffectedComponent(name="request_return")]
+        finding.evidence = [Evidence(file="agent.py", line=42)]
+
+        sarif = json.loads(SarifScanOutputFormatter().format(report))
+        result = sarif["runs"][0]["results"][0]
+        uri = result["locations"][0]["physicalLocation"]["artifactLocation"]["uri"]
+        self.assertEqual(uri, "agent.py")
+        self.assertEqual(
+            result["locations"][0]["physicalLocation"]["region"]["startLine"], 42
+        )
+
+    def test_component_names_are_preserved_as_a_property(self):
+        report = _make_scan_report()
+        report.findings[0].affected_components = [
+            AffectedComponent(name="request_return")
+        ]
+        sarif = json.loads(SarifScanOutputFormatter().format(report))
+        props = sarif["runs"][0]["results"][0]["properties"]
+        self.assertEqual(props["affectedComponents"], ["request_return"])
+
+    def test_component_path_is_used_when_there_is_no_evidence_file(self):
+        # Static findings set a real path, so that remains a valid fallback.
+        report = _make_scan_report()
+        finding = report.findings[0]
+        finding.affected_components = [
+            AffectedComponent(name="agent.py", path="src/agent.py")
+        ]
+        finding.evidence = []
+        sarif = json.loads(SarifScanOutputFormatter().format(report))
+        uri = sarif["runs"][0]["results"][0]["locations"][0]["physicalLocation"][
+            "artifactLocation"
+        ]["uri"]
+        self.assertEqual(uri, "src/agent.py")
+
+    def test_no_location_rather_than_a_name_shaped_one(self):
+        # With neither an evidence file nor a component path there is nothing
+        # path-like to report. Emitting the name would put a non-path back into
+        # a URI field, which is the bug this replaced.
+        report = _make_scan_report()
+        finding = report.findings[0]
+        finding.affected_components = [AffectedComponent(name="request_return")]
+        finding.evidence = []
+        sarif = json.loads(SarifScanOutputFormatter().format(report))
+        result = sarif["runs"][0]["results"][0]
+        self.assertNotIn("locations", result)
+        self.assertEqual(result["properties"]["affectedComponents"], ["request_return"])
+
     def test_relative_paths_unchanged(self):
         formatter = SarifScanOutputFormatter()
         self.assertEqual(formatter._normalize_uri("src/agent.py"), "src/agent.py")

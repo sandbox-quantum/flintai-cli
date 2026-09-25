@@ -11,6 +11,7 @@ Reference: OWASP Agentic Security Initiative (ASI) Top 10 — Dec 2025
 
 import json
 import os
+import re
 from typing import Any
 
 _CONFIG_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "config")
@@ -39,6 +40,51 @@ for _cat_key, _cat_data in AGENT_TAXONOMY.items():
             "asi_title": _cat_data["asi_title"],
             **_subcat_data,
         }
+
+
+def _normalize_key(key: str) -> str:
+    """Fold a key to its comparison form: lowercase, separators unified."""
+    return re.sub(r"[^a-z0-9]+", "_", key.strip().lower()).strip("_")
+
+
+# Comparison form → canonical subcategory key. The taxonomy has 36 subcategories
+# and no key appears under two categories, which is what makes
+# `category_for_subcategory` below unambiguous.
+_SUBCATEGORY_BY_NORMALIZED: dict[str, str] = {
+    _normalize_key(key): key for key in FLAT_TAXONOMY
+}
+
+
+def resolve_subcategory(subcategory: str) -> str | None:
+    """Return the canonical subcategory key for *subcategory*, else ``None``.
+
+    Only case and separator differences are folded. Nothing fuzzier: guessing
+    which taxonomy entry a genuinely unrecognised string "meant" would silently
+    file a finding under the wrong ASI category, which is worse than routing it
+    to ``beyond_asi`` where a reader can see it did not classify.
+    """
+    if not subcategory:
+        return None
+    if subcategory in FLAT_TAXONOMY:
+        return subcategory
+    return _SUBCATEGORY_BY_NORMALIZED.get(_normalize_key(subcategory))
+
+
+def category_for_subcategory(subcategory: str) -> str:
+    """Return the ASI category key that owns *subcategory*.
+
+    The category is a **function of** the subcategory, never an independent
+    input. Asking an LLM for both invites disagreement between them, and that is
+    exactly what happened: the system prompt renders each category as its code
+    and human title (``ASI03 — Identity and Privilege Abuse``) and never shows
+    the key, so the model inferred the key from the title and produced
+    ``asi03_identity_and_privilege_abuse`` against a canonical
+    ``asi03_identity_privilege_abuse``. Five of the ten titles do not round-trip
+    to their key, so the guess was wrong half the time — and a finding the
+    scanner had correctly identified was scored as both a miss and a false
+    positive. Derive; do not ask.
+    """
+    return get_finding_metadata(subcategory)["category"]
 
 
 def get_finding_metadata(subcategory: str) -> dict[str, Any]:
