@@ -183,9 +183,9 @@ taxonomy subcategory that fits, not only these):
 
 REPORTING RULES:
 - Call compute_cvss(vuln_type=<subcategory>) before EVERY report_finding().
-- `subcategory` MUST be one of the taxonomy keys above; `category` is its ASI
-  category key (e.g. subcategory=indirect_prompt_injection →
-  category=asi01_agent_goal_hijack).
+- `subcategory` MUST be copied EXACTLY from the taxonomy keys above (e.g.
+  `indirect_prompt_injection`). Do not reword, expand or abbreviate it. There is
+  no `category` argument — the ASI category is derived from the subcategory.
 - Set evidence to the EXACT code (the offending line or minimal snippet), not a
   description. Set evidence_file to the file path and evidence_line to the line.
 - Set agent_name to the agent display name from AGENT PROFILES.
@@ -204,7 +204,6 @@ EXAMPLE:
   turn bound.
   Step 1: compute_cvss(vuln_type="direct_prompt_injection", exposed_over_network=true)
   Step 2: report_finding(
-    category="asi01_agent_goal_hijack",
     subcategory="direct_prompt_injection",
     title="Untrusted request body passed directly to the agent",
     description="The /run endpoint feeds req.input into Runner.run(agent, ...) "

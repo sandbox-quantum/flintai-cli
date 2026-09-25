@@ -234,7 +234,6 @@ class TestReportFinding(unittest.TestCase):
     def test_records_finding(self):
         d = _make_dispatcher()
         result = d.report_finding(
-            category="asi01_agent_goal_hijack",
             subcategory="direct_prompt_injection",
             title="Test",
             description="desc",
@@ -252,7 +251,6 @@ class TestReportFinding(unittest.TestCase):
     def test_truncates_evidence(self):
         d = _make_dispatcher()
         d.report_finding(
-            category="test",
             subcategory="test",
             title="t",
             description="d",

@@ -36,6 +36,10 @@ from cvss import CVSS4
 from flintai.schema import RepoFile
 from flintai.scan.schema import AgentProfile, RawFinding
 from flintai.scan.static_scanner import StaticFinding
+from flintai.scan.taxonomy import (
+    category_for_subcategory,
+    resolve_subcategory,
+)
 from flintai.secret_anonymizer import anonymize_secrets
 
 logger = logging.getLogger(__name__)
@@ -647,7 +651,6 @@ class ToolDispatcher:
 
     def report_finding(
         self,
-        category: str,
         subcategory: str,
         title: str,
         description: str,
@@ -668,8 +671,9 @@ class ToolDispatcher:
         speculative findings — only report what you can directly evidence.
 
         Args:
-            category: ASI category key (e.g. 'asi01_agent_goal_hijack').
-            subcategory: Specific vulnerability type (e.g. 'direct_prompt_injection').
+            subcategory: Specific vulnerability type, exactly as spelled in the
+                taxonomy (e.g. 'direct_prompt_injection'). The ASI category is
+                derived from it — do not pass one.
             title: Short human-readable title.
             description: Technical description of the issue.
             impact: What an attacker could achieve.
@@ -688,6 +692,21 @@ class ToolDispatcher:
         self._call_counts["report_finding"] = (
             self._call_counts.get("report_finding", 0) + 1
         )
+        # Fold case/separator variants onto the canonical key. An unrecognised
+        # value is kept verbatim and classifies as `beyond_asi` downstream — the
+        # documented path for a finding outside the framework — but it is logged,
+        # because that path used to be silent and so was indistinguishable from
+        # a typo the model could have corrected.
+        canonical = resolve_subcategory(subcategory)
+        if canonical is None:
+            logger.warning(
+                "report_finding: subcategory %r is not in the taxonomy; "
+                "classifying as beyond_asi",
+                subcategory,
+            )
+        else:
+            subcategory = canonical
+        category = category_for_subcategory(subcategory)
         finding = {
             "category": category,
             "subcategory": subcategory,
